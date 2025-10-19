@@ -321,7 +321,7 @@ canvas#viz {
 }
 
 /* Collapse to single column earlier so phones don't see split layout */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .app-grid {
     grid-template-columns: 1fr;
   }
