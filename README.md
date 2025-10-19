@@ -67,11 +67,18 @@ data/
    - Linux: `/opt/lampp/htdocs/avee-player`
 2. Ensure Apache/PHP are running.
 3. Visit `http://localhost/avee-player/` in your browser.
-4. Add audio files by:
+4. Optional: FFmpeg for transcoding
+   - Install FFmpeg and ensure it's in PATH (`ffmpeg` CLI).
+   - Adjust `FFMPEG_BIN` in `api/config.php` if needed.
+5. Optional: cURL for remote import
+   - Ensure PHP cURL extension is enabled (`php.ini`: `extension=curl`).
+6. Add audio files by:
    - Dropping them into `assets/music/`
-   - Or using the Upload button (accepted: mp3, wav, ogg/opus, m4a/aac, webm, flac*)
+   - Using the Upload button (accepted: mp3, wav, ogg/opus, m4a/aac, webm, flac*)
+   - Importing from URL (Dropbox direct links or GitHub raw)
+   - Note: Remote imports are size-limited and host-restricted; configure in `api/config.php`.
 
-\* Note: Browser support for formats varies. MP3, AAC/M4A, OGG/Opus, WAV, and WebM are widely supported. FLAC may not play natively but is stored and indexed.
+\* Note: Browser support for formats varies. MP3, AAC/M4A, OGG/Opus, WAV, and WebM are widely supported. FLAC may not play natively but is stored and indexed. Unsupported formats (e.g., FLAC in some browsers) are optionally transcoded to MP3 if FFmpeg is available.
 
 ## Usage
 
