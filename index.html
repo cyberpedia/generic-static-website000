@@ -80,7 +80,10 @@
             <select id="viz-style">
               <option value="bars">Bars</option>
               <option value="wave">Wave</option>
+              <option value="mirror">Mirror Bars</option>
+              <option value="ring">Ring Wave</option>
               <option value="radial">Radial Bars</option>
+              <option value="particles">Particles</option>
               <option value="circle">Circle</option>
             </select>
           </div>
@@ -88,6 +91,11 @@
             <label>Colors</label>
             <input type="color" id="viz-color-1" value="#19d3ae"/>
             <input type="color" id="viz-color-2" value="#1e90ff"/>
+          </div>
+          <div class="viz-options">
+            <label><input type="checkbox" id="viz-glow" checked/> Glow</label>
+            <label><input type="checkbox" id="viz-trail" checked/> Trail</label>
+            <label><input type="checkbox" id="viz-art" checked/> Center Art</label>
           </div>
           <div class="presets">
             <input type="text" id="preset-name" placeholder="Preset name"/>

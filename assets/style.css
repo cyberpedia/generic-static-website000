@@ -256,6 +256,17 @@ canvas#viz {
   gap: 0.5rem;
   align-items: center;
 }
+.customize .viz-options {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.customize .viz-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
 .customize .presets input[type="text"], .customize .presets select {
   padding: 0.35rem 0.5rem;
   border: 1px solid #d8dce6;

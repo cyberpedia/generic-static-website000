@@ -169,17 +169,21 @@ const App = (() => {
           if (pic) {
             const base64 = arrayBufferToBase64(pic.data);
             const url = `data:${pic.format};base64,${base64}`;
-            document.getElementById('art').style.backgroundImage = `url(${url})`;
-            document.getElementById('art').style.backgroundSize = 'cover';
+            const artEl = document.getElementById('art');
+            artEl.style.backgroundImage = `url(${url})`;
+            artEl.style.backgroundSize = 'cover';
+            if (state.viz) state.viz.setAlbumArt(url);
           } else {
             document.getElementById('art').style.backgroundImage = '';
+            if (state.viz) state.viz.setAlbumArt(null);
           }
         },
         onError: () => {
           document.getElementById('art').style.backgroundImage = '';
+          if (state.viz) state.viz.setAlbumArt(null);
         }
       });
-    } catch (_) {}
+    } catch (_) { if (state.viz) state.viz.setAlbumArt(null); }
 
     incoming.addEventListener('loadedmetadata', () => {
       updateTime();
@@ -362,6 +366,12 @@ const App = (() => {
     document.getElementById('viz-color-2').addEventListener('change', (e) => {
       state.viz.setColors(document.getElementById('viz-color-1').value, e.target.value);
     });
+    const glow = document.getElementById('viz-glow');
+    const trail = document.getElementById('viz-trail');
+    const art = document.getElementById('viz-art');
+    if (glow) glow.addEventListener('change', () => state.viz.setGlow(glow.checked));
+    if (trail) trail.addEventListener('change', () => state.viz.setTrail(trail.checked));
+    if (art) art.addEventListener('change', () => state.viz.setShowArt(art.checked));
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
       document.getElementById('eq-panel').classList.toggle('show');
