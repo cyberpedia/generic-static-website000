@@ -8,9 +8,14 @@ class Visualizer {
     this.color2 = '#1e90ff';
     this.running = false;
 
+    // Analyzer tuning for better dynamic range
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.8;
+    this.analyser.minDecibels = -90;
+    this.analyser.maxDecibels = -10;
+
     this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+    this.freqFloat = new Float32Array(this.analyser.frequencyBinCount);
     this.timeData = new Uint8Array(this.analyser.frequencyBinCount);
 
     this.resize();
@@ -50,6 +55,22 @@ class Visualizer {
     this.running = false;
   }
 
+  // Normalize dB value to 0..1
+  norm(db) {
+    const min = this.analyser.minDecibels;
+    const max = this.analyser.maxDecibels;
+    let v = (db - min) / (max - min);
+    if (!isFinite(v)) v = 0;
+    return Math.max(0, Math.min(1, v));
+  }
+
+  // Log-scale sampling across frequency bins for more energy in lows
+  sampleIndex(i, bins, gamma = 2.0) {
+    const t = i / (bins - 1);
+    const l = this.freqFloat.length;
+    return Math.min(l - 1, Math.floor(Math.pow(t, gamma) * (l - 1)));
+  }
+
   draw() {
     const { ctx, canvas } = this;
     const w = canvas.width / (window.devicePixelRatio || 1);
@@ -66,13 +87,13 @@ class Visualizer {
   }
 
   drawBars(w, h) {
-    this.analyser.getByteFrequencyData(this.freqData);
-    const bars = 128;
-    const step = Math.floor(this.freqData.length / bars);
-    const bw = w / bars;
-    for (let i = 0; i < bars; i++) {
-      const v = this.freqData[i * step] / 255;
-      const bh = v * h;
+    this.analyser.getFloatFrequencyData(this.freqFloat);
+    const bins = 96;
+    const bw = w / bins;
+    for (let i = 0; i < bins; i++) {
+      const idx = this.sampleIndex(i, bins, 2.2);
+      const v = this.norm(this.freqFloat[idx]);
+      const bh = Math.pow(v, 1.25) * h; // emphasize dynamics
       ctxRoundRect(this.ctx, i * bw + 2, h - bh, bw - 4, bh, 4);
       this.ctx.fill();
     }
@@ -92,14 +113,14 @@ class Visualizer {
   }
 
   drawCircle(w, h) {
-    this.analyser.getByteFrequencyData(this.freqData);
+    this.analyser.getFloatFrequencyData(this.freqFloat);
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-    const bins = 64;
-    const step = Math.floor(this.freqData.length / bins);
+    const bins = 96;
     for (let i = 0; i < bins; i++) {
       const angle = (i / bins) * Math.PI * 2;
-      const v = this.freqData[i * step] / 255;
-      const len = r + v * (h / 3);
+      const idx = this.sampleIndex(i, bins, 2.0);
+      const v = this.norm(this.freqFloat[idx]);
+      const len = r + Math.pow(v, 1.35) * (h / 3);
       const x = cx + Math.cos(angle) * len;
       const y = cy + Math.sin(angle) * len;
       this.ctx.beginPath();
