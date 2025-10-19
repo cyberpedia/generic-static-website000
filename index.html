@@ -25,7 +25,19 @@
             <input type="file" id="upload-input" accept="audio/*" multiple />
           </label>
         </div>
+        <div class="toolbar">
+          <input type="url" id="import-url" placeholder="Import audio URL (e.g., Dropbox direct link)" />
+          <button id="import-url-btn" title="Download from URL">Import</button>
+        </div>
+        <div class="toolbar">
+          <button id="connect-dropbox" class="btn">Connect Dropbox</button>
+          <button id="connect-google" class="btn">Connect Google Drive</button>
+        </div>
         <ul id="library-list" class="list"></ul>
+        <div style="margin-top:0.6rem;">
+          <h4 style="margin:0.4rem 0;">Cloud Files</h4>
+          <ul id="cloud-list" class="list"></ul>
+        </div>
       </aside>
 
       <!-- Player Core -->
@@ -57,6 +69,9 @@
             <input type="range" id="rate" min="0.5" max="2" step="0.01" value="1"/>
           </div>
 
+          <button id="pitch-lock" class="btn" title="Preserve pitch when changing speed">Pitch Lock</button>
+          <button id="advanced-stretch" class="btn" title="Use advanced time-stretch engine">Advanced Stretch</button>
+
           <button id="record" class="btn" title="Record visualizer">Record</button>
         </div>
 
@@ -73,6 +88,13 @@
             <label>Colors</label>
             <input type="color" id="viz-color-1" value="#19d3ae"/>
             <input type="color" id="viz-color-2" value="#1e90ff"/>
+          </div>
+          <div class="presets">
+            <input type="text" id="preset-name" placeholder="Preset name"/>
+            <button id="save-viz-preset" class="btn">Save Viz Preset</button>
+            <button id="save-eq-preset" class="btn">Save EQ Preset</button>
+            <select id="preset-list"></select>
+            <button id="apply-preset" class="btn">Apply Preset</button>
           </div>
         </div>
 
@@ -111,6 +133,15 @@
           <input type="text" id="new-playlist-name" placeholder="New playlist name"/>
           <button id="create-playlist">Create</button>
         </div>
+        <div class="toolbar">
+          <input type="text" id="smart-name" placeholder="Smart name"/>
+          <input type="text" id="smart-contains" placeholder="Name contains"/>
+          <input type="text" id="smart-exts" placeholder="Exts (e.g. mp3,ogg)"/>
+          <input type="text" id="smart-folder" placeholder="Folder prefix"/>
+          <input type="number" id="smart-minmb" placeholder="Min MB" min="0"/>
+          <input type="number" id="smart-maxmb" placeholder="Max MB" min="0"/>
+          <button id="create-smart">Create Smart</button>
+        </div>
         <ul id="playlists" class="list"></ul>
         <div id="playlist-details" class="playlist-details">
           <h3 id="playlist-title">Playlist</h3>
@@ -132,6 +163,9 @@
   <script src="assets/js/equalizer.js"></script>
   <script src="assets/js/visualizer.js"></script>
   <script src="assets/js/playlists.js"></script>
+  <script src="assets/js/settings.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.30/dist/soundtouch.min.js"></script>
+  <script src="assets/js/cloud.js"></script>
   <script src="assets/script.js"></script>
   <script src="assets/js/app.js"></script>
 </body>

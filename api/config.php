@@ -21,6 +21,15 @@ if (!isset($_SESSION['csrf'])) {
 }
 
 const ALLOWED_EXTENSIONS = ['mp3','wav','ogg','oga','m4a','aac','webm','opus','flac'];
+const BROWSER_PLAYABLE_EXTS = ['mp3','wav','ogg','oga','m4a','aac','webm','opus']; // flac may not play in browsers
+
+// Feature flags
+const ENABLE_TRANSCODE = true; // transcode unsupported formats to mp3 if ffmpeg available
+const FFMPEG_BIN = 'ffmpeg';   // path to ffmpeg binary, adjust if needed
+
+const ENABLE_REMOTE_IMPORT = true; // allow importing audio via URL
+const ALLOWED_REMOTE_HOSTS = ['dl.dropboxusercontent.com','dropboxusercontent.com','raw.githubusercontent.com'];
+const MAX_REMOTE_IMPORT_MB = 50;
 
 function send_json($data, int $code = 200): void {
     http_response_code($code);
@@ -109,6 +118,105 @@ function write_json_file(string $file, $data): bool {
     }
     @unlink($tmp);
     return false;
+}
+
+function has_ffmpeg(): bool {
+    if (!ENABLE_TRANSCODE) return false;
+    $cmd = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'where ' . FFMPEG_BIN : 'which ' . FFMPEG_BIN;
+    $out = @shell_exec($cmd . ' 2>&1');
+    return is_string($out) && trim($out) !== '';
+}
+
+function transcode_to_mp3(string $sourcePath, string $destPath): bool {
+    if (!has_ffmpeg()) return false;
+    $sp = escapeshellarg($sourcePath);
+    $dp = escapeshellarg($destPath);
+    $bin = FFMPEG_BIN;
+    $cmd = "$bin -y -i $sp -vn -codec:a libmp3lame -q:a 2 $dp";
+    $out = @shell_exec($cmd . ' 2>&1');
+    return file_exists($destPath) && filesize($destPath) > 0;
+}
+
+function is_host_allowed(string $url): bool {
+    $parts = @parse_url($url);
+    if (!$parts || !isset($parts['host'])) return false;
+    $host = strtolower($parts['host']);
+    foreach (ALLOWED_REMOTE_HOSTS as $allowed) {
+        if (substr($host, -strlen($allowed)) === strtolower($allowed)) return true;
+    }
+    return false;
+}
+
+function download_remote_to_music(string $url): array {
+    if (!ENABLE_REMOTE_IMPORT) return ['ok' => false, 'error' => 'Remote import disabled'];
+    if (!is_host_allowed($url)) return ['ok' => false, 'error' => 'Host not allowed'];
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_TIMEOUT => 60,
+        CURLOPT_HEADER => true
+    ]);
+    $resp = curl_exec($ch);
+    if ($resp === false) {
+        $err = curl_error($ch);
+        curl_close($ch);
+        return ['ok' => false, 'error' => 'cURL error: ' . $err];
+    }
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    $headers = substr($resp, 0, $headerSize);
+    $body = substr($resp, $headerSize);
+    $size = strlen($body);
+    curl_close($ch);
+
+    if ($status < 200 || $status >= 300) return ['ok' => false, 'error' => 'HTTP ' . $status];
+    if ($size > MAX_REMOTE_IMPORT_MB * 1024 * 1024) return ['ok' => false, 'error' => 'File too large'];
+
+    // Determine filename and extension
+    $name = 'remote_' . bin2hex(random_bytes(6));
+    if (preg_match('/filename=\"?([^\";]+)\"?/i', $headers, $m)) {
+        $name = sanitize_basename($m[1]);
+    } else {
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $base = basename($path);
+        if ($base) $name = sanitize_basename($base);
+    }
+    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    if (!$ext) $ext = 'mp3'; // default
+    if (!ext_allowed($ext)) return ['ok' => false, 'error' => 'Extension not allowed'];
+
+    $target = MUSIC_DIR . '/' . $name;
+    $base = pathinfo($name, PATHINFO_FILENAME);
+    $counter = 1;
+    while (file_exists($target)) {
+        $target = MUSIC_DIR . '/' . $base . '_' . $counter . '.' . $ext;
+        $counter++;
+    }
+
+    $ok = @file_put_contents($target, $body) !== false;
+    if (!$ok) return ['ok' => false, 'error' => 'Failed to save file'];
+
+    // Optional transcode if not browser-playable
+    if (!in_array($ext, BROWSER_PLAYABLE_EXTS, true) && has_ffmpeg()) {
+        $mp3 = MUSIC_DIR . '/' . $base . '.mp3';
+        $ctr = 1;
+        while (file_exists($mp3)) {
+            $mp3 = MUSIC_DIR . '/' . $base . '_' . $ctr . '.mp3';
+            $ctr++;
+        }
+        if (transcode_to_mp3($target, $mp3)) {
+            // keep original, add mp3 to library
+        }
+    }
+
+    $index = list_music_files();
+    write_json_file('music_index.json', $index);
+
+    return ['ok' => true, 'file' => basename($target)];
 }
 
 function list_music_files(): array {

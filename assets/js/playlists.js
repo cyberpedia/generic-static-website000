@@ -4,6 +4,7 @@ const PlaylistUI = (() => {
   function init(app) {
     state.app = app;
     document.getElementById('create-playlist').addEventListener('click', createPlaylist);
+    document.getElementById('create-smart').addEventListener('click', createSmartPlaylist);
     document.getElementById('add-current').addEventListener('click', addCurrent);
     document.getElementById('delete-playlist').addEventListener('click', deleteSelected);
     loadPlaylists();
@@ -19,7 +20,7 @@ const PlaylistUI = (() => {
     ul.innerHTML = '';
     playlists.forEach(pl => {
       const li = document.createElement('li');
-      li.textContent = pl.name;
+      li.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
       li.dataset.id = pl.id;
       li.addEventListener('click', () => selectPlaylist(pl.id));
       if (pl.id === state.selectedId) li.classList.add('active');
@@ -45,6 +46,7 @@ const PlaylistUI = (() => {
       const removeBtn = document.createElement('button');
       removeBtn.className = 'btn';
       removeBtn.textContent = 'Remove';
+      removeBtn.disabled = data.type === 'smart';
       removeBtn.addEventListener('click', () => removeTrack(i));
       actions.appendChild(playBtn);
       actions.appendChild(removeBtn);
@@ -67,6 +69,37 @@ const PlaylistUI = (() => {
     if (res.ok) {
       loadPlaylists();
       selectPlaylist(res.playlist.id);
+    }
+  }
+
+  async function createSmartPlaylist() {
+    const name = (document.getElementById('smart-name').value || '').trim();
+    const contains = (document.getElementById('smart-contains').value || '').trim();
+    const exts = (document.getElementById('smart-exts').value || '').trim().toLowerCase();
+    const folder = (document.getElementById('smart-folder').value || '').trim();
+    const minMb = Number(document.getElementById('smart-minmb').value || '0');
+    const maxMb = Number(document.getElementById('smart-maxmb').value || '0');
+    if (!name) return alert('Enter smart playlist name');
+
+    const rules = {
+      contains,
+      exts: exts ? exts.split(',').map(s => s.trim()).filter(Boolean) : [],
+      folder,
+      minBytes: minMb > 0 ? Math.round(minMb * 1024 * 1024) : 0,
+      maxBytes: maxMb > 0 ? Math.round(maxMb * 1024 * 1024) : 0
+    };
+    const res = await API.post('api/playlists.php', { action: 'create_smart', name, rules });
+    if (res.ok) {
+      loadPlaylists();
+      selectPlaylist(res.playlist.id);
+      document.getElementById('smart-name').value = '';
+      document.getElementById('smart-contains').value = '';
+      document.getElementById('smart-exts').value = '';
+      document.getElementById('smart-folder').value = '';
+      document.getElementById('smart-minmb').value = '';
+      document.getElementById('smart-maxmb').value = '';
+    } else {
+      alert(res.error || 'Failed to create smart playlist');
     }
   }
 

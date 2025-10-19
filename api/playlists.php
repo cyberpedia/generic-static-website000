@@ -13,12 +13,44 @@ function save_playlists(array $data): bool {
     return write_json_file('playlists.json', $data);
 }
 
+function resolve_smart_tracks(array $rules): array {
+    $index = read_json_file('music_index.json', []);
+    $items = [];
+    if (isset($index['items']) && is_array($index['items'])) {
+        $items = $index['items'];
+    } elseif (is_array($index)) {
+        $items = $index; // plain array format
+    }
+    $contains = strtolower($rules['contains'] ?? '');
+    $exts = array_map('strtolower', is_array($rules['exts'] ?? []) ? $rules['exts'] : []);
+    $folder = strtolower($rules['folder'] ?? '');
+    $min = (int)($rules['minBytes'] ?? 0);
+    $max = (int)($rules['maxBytes'] ?? 0);
+    $out = [];
+    foreach ($items as $it) {
+        $name = $it['name'] ?? '';
+        $path = strtolower($it['path'] ?? '');
+        $ext = strtolower($it['ext'] ?? pathinfo($name, PATHINFO_EXTENSION));
+        $size = (int)($it['size'] ?? 0);
+        if ($contains && strpos(strtolower($name), $contains) === false) continue;
+        if (!empty($exts) && !in_array($ext, $exts, true)) continue;
+        if ($folder && strpos($path, strtolower($folder)) !== 0) continue;
+        if ($min && $size < $min) continue;
+        if ($max && $size > $max) continue;
+        $out[] = ['path' => $it['path'], 'name' => $name];
+    }
+    return $out;
+}
+
 if (method_is('GET')) {
     $data = load_playlists();
     $id = $_GET['id'] ?? '';
     if ($id) {
         foreach ($data['playlists'] as $pl) {
             if (($pl['id'] ?? '') === $id) {
+                if (($pl['type'] ?? '') === 'smart') {
+                    $pl['tracks'] = resolve_smart_tracks($pl['rules'] ?? []);
+                }
                 send_json($pl);
             }
         }
@@ -37,7 +69,18 @@ if (method_is('POST')) {
         $name = trim($payload['name'] ?? '');
         if ($name === '') send_json(['error' => 'Name required'], 422);
         $id = bin2hex(random_bytes(8));
-        $pl = ['id' => $id, 'name' => $name, 'tracks' => [], 'created' => time()];
+        $pl = ['id' => $id, 'name' => $name, 'tracks' => [], 'created' => time(), 'type' => 'static'];
+        $data['playlists'][] = $pl;
+        save_playlists($data);
+        send_json(['ok' => true, 'playlist' => $pl]);
+    }
+
+    if ($action === 'create_smart') {
+        $name = trim($payload['name'] ?? '');
+        $rules = $payload['rules'] ?? null;
+        if ($name === '' || !is_array($rules)) send_json(['error' => 'Invalid'], 422);
+        $id = bin2hex(random_bytes(8));
+        $pl = ['id' => $id, 'name' => $name, 'type' => 'smart', 'rules' => $rules, 'created' => time()];
         $data['playlists'][] = $pl;
         save_playlists($data);
         send_json(['ok' => true, 'playlist' => $pl]);
@@ -73,6 +116,9 @@ if (method_is('POST')) {
         if (!$id || !is_array($track)) send_json(['error' => 'Invalid'], 422);
         foreach ($data['playlists'] as &$pl) {
             if (($pl['id'] ?? '') === $id) {
+                if (($pl['type'] ?? 'static') === 'smart') {
+                    send_json(['error' => 'Smart playlists are generated automatically'], 400);
+                }
                 $pl['tracks'][] = [
                     'path' => sanitize_relpath($track['path'] ?? ''),
                     'name' => sanitize_basename($track['name'] ?? '')
@@ -90,6 +136,9 @@ if (method_is('POST')) {
         if (!$id || $idx < 0) send_json(['error' => 'Invalid'], 422);
         foreach ($data['playlists'] as &$pl) {
             if (($pl['id'] ?? '') === $id) {
+                if (($pl['type'] ?? 'static') === 'smart') {
+                    send_json(['error' => 'Smart playlists are generated automatically'], 400);
+                }
                 if ($idx >= 0 && $idx < count($pl['tracks'])) {
                     array_splice($pl['tracks'], $idx, 1);
                     save_playlists($data);
@@ -107,6 +156,9 @@ if (method_is('POST')) {
         if (!$id || $from < 0 || $to < 0) send_json(['error' => 'Invalid'], 422);
         foreach ($data['playlists'] as &$pl) {
             if (($pl['id'] ?? '') === $id) {
+                if (($pl['type'] ?? 'static') === 'smart') {
+                    send_json(['error' => 'Smart playlists are generated automatically'], 400);
+                }
                 if ($from < count($pl['tracks']) && $to < count($pl['tracks'])) {
                     $item = $pl['tracks'][$from];
                     array_splice($pl['tracks'], $from, 1);

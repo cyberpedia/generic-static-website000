@@ -74,6 +74,7 @@ footer {
   gap: 0.6rem;
   align-items: center;
   margin-bottom: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .sidebar .toolbar input[type="text"] {
@@ -204,13 +205,24 @@ canvas#viz {
 
 /* Customize */
 .customize {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
   gap: 1rem;
   align-items: center;
   margin: 0.5rem 0;
 }
 .customize .viz-style select {
   padding: 0.3rem 0.5rem;
+  border: 1px solid #d8dce6;
+  border-radius: 8px;
+}
+.customize .presets {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.customize .presets input[type="text"], .customize .presets select {
+  padding: 0.35rem 0.5rem;
   border: 1px solid #d8dce6;
   border-radius: 8px;
 }

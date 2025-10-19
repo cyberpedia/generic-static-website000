@@ -20,7 +20,10 @@ const App = (() => {
     currentTrack: null,
     shuffle: false,
     repeat: false,
-    timerInterval: null
+    timerInterval: null,
+    tsMode: false,        // advanced time-stretch mode
+    tsNode: null,         // PitchShifter node
+    tsPaused: false
   };
 
   async function init() {
@@ -125,6 +128,16 @@ const App = (() => {
 
   function playTrack(track) {
     const src = 'assets/music/' + track.path;
+
+    // Update UI info
+    document.getElementById('track-title').textContent = track.name || track.path;
+    state.currentTrack = { path: track.path, name: track.name };
+
+    if (state.tsMode) {
+      playTrackAdvanced(src);
+      return;
+    }
+
     const useA = state.useA;
 
     const incoming = useA ? state.audioB : state.audioA;
@@ -137,10 +150,6 @@ const App = (() => {
     incoming.currentTime = 0;
     incoming.playbackRate = Number(document.getElementById('rate').value || 1);
     incoming.volume = 1.0;
-
-    // Update UI info
-    document.getElementById('track-title').textContent = track.name || track.path;
-    state.currentTrack = { path: track.path, name: track.name };
 
     // Art via jsmediatags if possible
     try {
@@ -171,6 +180,51 @@ const App = (() => {
       state.useA = !state.useA;
       document.getElementById('play').textContent = 'Pause';
     }).catch(err => console.error('Playback error', err));
+  }
+
+  async function playTrackAdvanced(src) {
+    // disconnect media elements from eq input
+    try { state.gainA.disconnect(state.eq.input); } catch (_) {}
+    try { state.gainB.disconnect(state.eq.input); } catch (_) {}
+
+    // stop any existing ts node
+    if (state.tsNode) {
+      try { state.tsNode.disconnect(); } catch (_) {}
+      state.tsNode = null;
+    }
+
+    // fetch and decode audio buffer
+    const resp = await fetch(src);
+    const arr = await resp.arrayBuffer();
+    const buffer = await state.ctx.decodeAudioData(arr);
+
+    // instantiate PitchShifter from soundtouchjs
+    const node = new PitchShifter(state.ctx, buffer, 4096);
+    node.connect(state.eq.input);
+
+    // set tempo from UI
+    const r = Number(document.getElementById('rate').value || 1);
+    node.tempo = r;
+    node.rate = 1;
+    node.pitch = 1;
+
+    // update time periodically
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.timerInterval = setInterval(() => {
+      const cur = node.timePlayed || 0;
+      const dur = buffer.duration || 0;
+      document.getElementById('track-time').textContent = `${API.fmtTime(cur)} / ${API.fmtTime(dur)}`;
+      if (cur >= dur) {
+        clearInterval(state.timerInterval);
+        onEnded();
+      }
+    }, 250);
+
+    // save node
+    state.tsNode = node;
+
+    // set play button state
+    document.getElementById('play').textContent = 'Pause';
   }
 
   function crossfade(inGain, outGain, seconds) {
@@ -209,6 +263,19 @@ const App = (() => {
 
   function bindUI() {
     document.getElementById('play').addEventListener('click', () => {
+      if (state.tsMode && state.tsNode) {
+        if (state.tsPaused) {
+          try { state.tsNode.connect(state.eq.input); } catch (_) {}
+          state.tsPaused = false;
+          document.getElementById('play').textContent = 'Pause';
+        } else {
+          try { state.tsNode.disconnect(); } catch (_) {}
+          state.tsPaused = true;
+          document.getElementById('play').textContent = 'Play';
+        }
+        return;
+      }
+
       const active = state.useA ? state.audioB : state.audioA;
       if (active.paused) {
         active.play();
@@ -247,9 +314,23 @@ const App = (() => {
 
     document.getElementById('rate').addEventListener('input', (e) => {
       const r = Number(e.target.value);
-      state.audioA.playbackRate = r;
-      state.audioB.playbackRate = r;
-    });
+      if (state.tsMode && state.tsNode) {
+        // advanced: change tempo (time-stretch) without pitch
+        try { state.tsNode.tempo = r; } catch (_) {}
+      } else {
+        state
+
+    const pitchBtn = document.getElementById('pitch-lock');
+    if (pitchBtn) {
+      pitchBtn.addEventListener('click', () => {
+        const on = !pitchBtn.classList.contains('primary');
+        setPitchLock(on);
+        pitchBtn.classList.toggle('primary', on);
+      });
+      // default ON
+      setPitchLock(true);
+      pitchBtn.classList.add('primary');
+    }
 
     document.getElementById('rescan').addEventListener('click', async () => {
       await loadLibrary(true);
@@ -258,6 +339,17 @@ const App = (() => {
     document.getElementById('search').addEventListener('input', (e) => {
       filterLibrary(e.target.value);
     });
+
+    const importBtn = document.getElementById('import-url-btn');
+    if (importBtn) {
+      importBtn.addEventListener('click', async () => {
+        const url = (document.getElementById('import-url').value || '').trim();
+        if (!url) return;
+        const res = await API.post('api/remote_import.php', { url });
+        if (!res.ok) alert(res.error || 'Import failed');
+        await loadLibrary(true);
+      });
+    }
 
     const up = document.getElementById('upload-input');
     up.addEventListener('change', async () => {
@@ -283,6 +375,25 @@ const App = (() => {
     document.getElementById('eq-toggle').addEventListener('click', () => {
       document.getElementById('eq-panel').classList.toggle('show');
     });
+
+    const advBtn = document.getElementById('advanced-stretch');
+    if (advBtn) {
+      advBtn.addEventListener('click', () => {
+        state.tsMode = !state.tsMode;
+        advBtn.classList.toggle('primary', state.tsMode);
+        if (state.tsMode && state.currentTrack) {
+          playTrack(state.currentTrack);
+        } else {
+          // reconnect media element sources
+          try { state.gainA.connect(state.eq.input); } catch (_) {}
+          try { state.gainB.connect(state.eq.input); } catch (_) {}
+          if (state.tsNode) {
+            try { state.tsNode.disconnect(); } catch (_) {}
+            state.tsNode = null;
+          }
+        }
+      });
+    }
     document.getElementById('eq-preset').addEventListener('change', (e) => {
       state.eq.setPreset(e.target.value);
     });
@@ -345,9 +456,24 @@ const App = (() => {
     return window.btoa(binary);
   }
 
-  return { init, playTrack, state, currentTrack: state.currentTrack };
+  function setPitchLock(on) {
+    const props = ['preservesPitch', 'mozPreservesPitch', 'webkitPreservesPitch'];
+    for (const p of props) {
+      try { state.audioA[p] = on; } catch (_) {}
+      try { state.audioB[p] = on; } catch (_) {}
+    }
+  }
+
+  function getCurrentTrack() {
+    return state.currentTrack;
+  }
+
+  return { init, playTrack, state, getCurrentTrack, loadLibrary };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
-  App.init().catch(err => console.error(err));
+  App.init().then(() => {
+    if (typeof Settings !== 'undefined') Settings.init();
+    if (typeof Cloud !== 'undefined') Cloud.init();
+  }).catch(err => console.error(err));
 });

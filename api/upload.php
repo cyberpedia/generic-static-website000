@@ -31,6 +31,17 @@ if (!move_uploaded_file($file['tmp_name'], $target)) {
     send_json(['error' => 'Failed to save'], 500);
 }
 
+// Optional transcode if extension likely unsupported by browser
+if (!in_array($ext, BROWSER_PLAYABLE_EXTS, true) && has_ffmpeg()) {
+    $mp3 = MUSIC_DIR . '/' . $base . '.mp3';
+    $ctr = 1;
+    while (file_exists($mp3)) {
+        $mp3 = MUSIC_DIR . '/' . $base . '_' . $ctr . '.mp3';
+        $ctr++;
+    }
+    transcode_to_mp3($target, $mp3);
+}
+
 $index = list_music_files();
 write_json_file('music_index.json', $index);
 
