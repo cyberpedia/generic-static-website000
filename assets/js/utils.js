@@ -1,9 +1,15 @@
 const API = (() => {
   const state = { csrf: null, allowed: [], uploadMax: null };
 
+  function baseURL(path) {
+    // Build URL relative to current directory, robust against <base> tags and non-root deployments
+    const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+    return new URL(path, base);
+  }
+
   async function init() {
-    const res = await fetch('api/session.php', { credentials: 'same-origin' });
-    const json = await res.json();
+    const res = await fetch(baseURL('api/session.php'), { credentials: 'same-origin' });
+    const json = await safeJson(res);
     state.csrf = json.csrf;
     state.allowed = json.allowed_extensions || [];
     state.uploadMax = json.max_upload_mb || null;
@@ -11,14 +17,16 @@ const API = (() => {
   }
 
   async function get(path, params = {}) {
-    const url = new URL(path, window.location.origin);
-    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    const url = baseURL(path);
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null) url.searchParams.set(k, v);
+    }
     const res = await fetch(url.toString(), { credentials: 'same-origin' });
-    return res.json();
+    return safeJson(res);
   }
 
   async function post(path, body = {}) {
-    const res = await fetch(path, {
+    const res = await fetch(baseURL(path), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -27,19 +35,40 @@ const API = (() => {
       credentials: 'same-origin',
       body: JSON.stringify(body)
     });
-    return res.json();
+    return safeJson(res);
   }
 
   async function upload(path, file) {
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(path, {
+    const res = await fetch(baseURL(path), {
       method: 'POST',
       headers: { 'X-CSRF-Token': state.csrf },
       credentials: 'same-origin',
       body: form
     });
-    return res.json();
+    return safeJson(res);
+  }
+
+  async function safeJson(res) {
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if (!res.ok) {
+      return { ok: false, status: res.status, error: `HTTP ${res.status}` };
+    }
+    if (ct.includes('application/json')) {
+      try {
+        return await res.json();
+      } catch (_) {
+        return { ok: false, status: res.status, error: 'Invalid JSON body' };
+      }
+    }
+    // Fallback: try to parse, else return text for diagnostics
+    try {
+      return await res.json();
+    } catch (_) {
+      const txt = await res.text();
+      return { ok: false, status: res.status, error: 'Invalid JSON', body: txt };
+    }
   }
 
   function fmtTime(sec) {

@@ -21,7 +21,8 @@ const App = (() => {
     shuffle: false,
     repeat: false,
     timerInterval: null,
-    };
+    pitchLock: true
+  };
 
   async function init() {
     await API.init();
@@ -66,9 +67,51 @@ const App = (() => {
     state.audioB.addEventListener('ended', onEnded);
   }
 
+  function ensureCtx() {
+    if (state.ctx) return;
+
+    state.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    state.master = state.ctx.createGain();
+    state.eq = new Equalizer(state.ctx);
+    state.analyser = state.ctx.createAnalyser();
+    state.analyser.fftSize = 2048;
+    state.analyser.smoothingTimeConstant = 0.8;
+
+    // Audio chain: sources -> eq -> analyser -> destination
+    state.eq.connect(state.analyser);
+    state.analyser.connect(state.ctx.destination);
+
+    // For recording visualizer + audio
+    state.recordingDest = state.ctx.createMediaStreamDestination();
+
+    // connect eq output to recording as well
+    state.eq.output.connect(state.recordingDest);
+
+    // setup audio elements
+    setupAudioElements();
+
+    // Visualizer
+    const canvas = document.getElementById('viz');
+    state.viz = new Visualizer(state.analyser, canvas);
+    state.viz.start();
+
+    // apply default volume
+    const v = Number(document.getElementById('volume').value || 0.9);
+    setVolume(v);
+
+    // apply stored pitch lock
+    setPitchLock(state.pitchLock);
+  }
+
   async function loadLibrary(rescan = false) {
     const data = await API.get('api/library.php', { page: 0, size: 500, rescan: rescan ? 1 : undefined });
-    state.library = data.items || [];
+    if (data && data.ok === false) {
+      console.warn('Library API unavailable or returned non-JSON', data);
+      // Keep existing library; do not overwrite with empty on failure
+      renderLibrary();
+      return;
+    }
+    state.library = (data && data.items) ? data.items : [];
     renderLibrary();
   }
 
@@ -93,17 +136,19 @@ const App = (() => {
 
   function playIndex(i) {
     if (i < 0 || i >= state.library.length) return;
+    ensureCtx();
     const track = state.library[i];
     state.currentIndex = i;
     playTrack(track);
   }
 
   function playTrack(track) {
-    const src = 'assets/music/' + track.path;
+    ensureCtx();
+    const src = track.blobUrl ? track.blobUrl : ('assets/music/' + track.path);
 
     // Update UI info
-    document.getElementById('track-title').textContent = track.name || track.path;
-    state.currentTrack = { path: track.path, name: track.name };
+    document.getElementById('track-title').textContent = track.name || track.path || '—';
+    state.currentTrack = { path: track.path, name: track.name, blobUrl: track.blobUrl || null };
 
     const useA = state.useA;
 
@@ -118,25 +163,29 @@ const App = (() => {
     incoming.playbackRate = Number(document.getElementById('rate').value || 1);
     incoming.volume = 1.0;
 
-    // Art via jsmediatags if possible
-    try {
-      jsmediatags.read(src, {
-        onSuccess: (tag) => {
-          const pic = tag.tags.picture;
-          if (pic) {
-            const base64 = arrayBufferToBase64(pic.data);
-            const url = `data:${pic.format};base64,${base64}`;
-            document.getElementById('art').style.backgroundImage = `url(${url})`;
-            document.getElementById('art').style.backgroundSize = 'cover';
-          } else {
+    // Art via jsmediatags if possible (only for file URLs, not blobs)
+    if (!track.blobUrl) {
+      try {
+        jsmediatags.read(src, {
+          onSuccess: (tag) => {
+            const pic = tag.tags.picture;
+            if (pic) {
+              const base64 = arrayBufferToBase64(pic.data);
+              const url = `data:${pic.format};base64,${base64}`;
+              document.getElementById('art').style.backgroundImage = `url(${url})`;
+              document.getElementById('art').style.backgroundSize = 'cover';
+            } else {
+              document.getElementById('art').style.backgroundImage = '';
+            }
+          },
+          onError: () => {
             document.getElementById('art').style.backgroundImage = '';
           }
-        },
-        onError: () => {
-          document.getElementById('art').style.backgroundImage = '';
-        }
-      });
-    } catch (_) {}
+        });
+      } catch (_) {}
+    } else {
+      document.getElementById('art').style.backgroundImage = '';
+    }
 
     incoming.addEventListener('loadedmetadata', () => {
       updateTime();
@@ -148,8 +197,6 @@ const App = (() => {
       document.getElementById('play').textContent = 'Pause';
     }).catch(err => console.error('Playback error', err));
   }
-
-  // Advanced time-stretch mode removed due to module compatibility issues with CDN builds.
 
   function crossfade(inGain, outGain, seconds) {
     const now = state.ctx.currentTime;
@@ -187,9 +234,12 @@ const App = (() => {
 
   function bindUI() {
     document.getElementById('play').addEventListener('click', async () => {
-      // Ensure AudioContext resumed per user gesture
-      try { if (state.ctx && state.ctx.state === 'suspended') await state.ctx.resume(); } catch (_) {}
-
+      ensureCtx();
+      try { await state.ctx.resume(); } catch (_) {}
+      if (state.currentIndex === -1 && state.library.length > 0 && (state.useA ? state.audioB.src === '' : state.audioA.src === '')) {
+        playIndex(0);
+        return;
+      }
       const active = state.useA ? state.audioB : state.audioA;
       if (active.paused) {
         active.play();
@@ -228,8 +278,8 @@ const App = (() => {
 
     document.getElementById('rate').addEventListener('input', (e) => {
       const r = Number(e.target.value);
-      state.audioA.playbackRate = r;
-      state.audioB.playbackRate = r;
+      if (state.audioA) state.audioA.playbackRate = r;
+      if (state.audioB) state.audioB.playbackRate = r;
     });
 
     const pitchBtn = document.getElementById('pitch-lock');
@@ -239,9 +289,9 @@ const App = (() => {
         setPitchLock(on);
         pitchBtn.classList.toggle('primary', on);
       });
-      // default ON
-      setPitchLock(true);
+      // default ON without touching AudioContext
       pitchBtn.classList.add('primary');
+      state.pitchLock = true;
     }
 
     document.getElementById('rescan').addEventListener('click', async () => {
@@ -266,22 +316,42 @@ const App = (() => {
     const up = document.getElementById('upload-input');
     up.addEventListener('change', async () => {
       const files = Array.from(up.files || []);
+      let anySuccess = false;
+      let anyFallback = false;
       for (const f of files) {
         const res = await API.upload('api/upload.php', f);
-        if (!res.ok) alert(res.error || 'Upload failed');
+        if (res && res.ok) {
+          anySuccess = true;
+        } else {
+          anyFallback = true;
+          // Fallback: play directly from blob URL in this session
+          const url = URL.createObjectURL(f);
+          const item = {
+            id: 'blob-' + Math.random().toString(36).slice(2),
+            path: '',
+            name: f.name,
+            size: f.size,
+            blobUrl: url
+          };
+          state.library.unshift(item);
+        }
       }
-      await loadLibrary(true);
+      if (anySuccess) {
+        await loadLibrary(true);
+      } else if (anyFallback) {
+        renderLibrary();
+      }
       up.value = '';
     });
 
     document.getElementById('viz-style').addEventListener('change', (e) => {
-      state.viz.setStyle(e.target.value);
+      if (state.viz) state.viz.setStyle(e.target.value);
     });
     document.getElementById('viz-color-1').addEventListener('change', (e) => {
-      state.viz.setColors(e.target.value, document.getElementById('viz-color-2').value);
+      if (state.viz) state.viz.setColors(e.target.value, document.getElementById('viz-color-2').value);
     });
     document.getElementById('viz-color-2').addEventListener('change', (e) => {
-      state.viz.setColors(document.getElementById('viz-color-1').value, e.target.value);
+      if (state.viz) state.viz.setColors(document.getElementById('viz-color-1').value, e.target.value);
     });
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
@@ -289,10 +359,12 @@ const App = (() => {
     });
 
     document.getElementById('eq-preset').addEventListener('change', (e) => {
+      ensureCtx();
       state.eq.setPreset(e.target.value);
     });
     document.querySelectorAll('#eq-panel input[type="range"]').forEach(sl => {
       sl.addEventListener('input', (e) => {
+        ensureCtx();
         const i = Number(e.target.dataset.band);
         const v = Number(e.target.value);
         state.eq.setGain(i, v);
@@ -305,11 +377,12 @@ const App = (() => {
   function setVolume(v) {
     // control via element volume plus master gain
     const active = state.useA ? state.audioB : state.audioA;
-    active.volume = v;
-    state.master && (state.master.gain.value = v);
+    if (active) active.volume = v;
+    if (state.master) state.master.gain.value = v;
   }
 
   function toggleRecording() {
+    ensureCtx();
     if (state.recorder) {
       state.recorder.stop();
       state.recorder = null;
@@ -351,10 +424,13 @@ const App = (() => {
   }
 
   function setPitchLock(on) {
+    state.pitchLock = !!on;
     const props = ['preservesPitch', 'mozPreservesPitch', 'webkitPreservesPitch'];
-    for (const p of props) {
-      try { state.audioA[p] = on; } catch (_) {}
-      try { state.audioB[p] = on; } catch (_) {}
+    if (state.audioA && state.audioB) {
+      for (const p of props) {
+        try { state.audioA[p] = state.pitchLock; } catch (_) {}
+        try { state.audioB[p] = state.pitchLock; } catch (_) {}
+      }
     }
   }
 
