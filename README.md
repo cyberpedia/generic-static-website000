@@ -141,6 +141,12 @@ data/
 - Gapless playback with pre-buffering improvements
 - Advanced time-stretching (tempo without pitch shift) via SoundTouch.js
 
+## Export / Download
+
+- Generate a ZIP archive of the project (excluding audio files in `assets/music`) via:
+  - HTTP: `http://localhost/avee-player/api/export.php?download=1`
+  - The generated file is saved to `data/avee-player.zip`.
+
 ## Troubleshooting
 
 - If uploads fail, check `php.ini`:
