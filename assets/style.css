@@ -26,16 +26,15 @@ header {
 
 main {
   flex: 1 0 auto;
-  max-width: 750px;
+  max-width: 1200px;
   width: 100%;
   margin: 2.2rem auto 0 auto;
   background: #fff;
-  padding: 2.8rem 2.2rem 2.4rem;
+  padding: 1.8rem 1.8rem 1.8rem;
   border-radius: 18px;
   box-shadow: 0 6px 32px 0 rgba(42,54,96,0.07), 0 1.5px 6px 0 rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
-  justify-content: center;
   min-height: 65vh;
   position: relative;
   overflow-y: auto;
@@ -53,10 +52,239 @@ footer {
   flex-shrink: 0;
 }
 
+/* App grid */
+.app-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr 320px;
+  gap: 1.2rem;
+}
+
+.sidebar {
+  background: #f7f8fb;
+  border: 1px solid #e6e9f2;
+  border-radius: 14px;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar .toolbar {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.sidebar .toolbar input[type="text"] {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d8dce6;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.sidebar .toolbar .upload-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #2e7be7;
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.sidebar .toolbar .upload-btn input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+.list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px dashed #e3e6ef;
+  cursor: pointer;
+}
+.list li:hover {
+  background: #eef3ff;
+}
+.list li.active {
+  background: #dbe8ff;
+}
+
+/* Player core */
+.player-core {
+  background: #f7faff;
+  border: 1px solid #e6e9f2;
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.art-and-info {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+.art {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  background: radial-gradient(120px 120px at 30% 20%, #2e7be7, #19d3ae);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+.track-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.track-time {
+  font-size: 0.9rem;
+  color: #555;
+  margin-top: 0.2rem;
+}
+
+canvas#viz {
+  width: 100%;
+  height: 300px;
+  background: #0f1322;
+  border-radius: 12px;
+  margin: 0.6rem 0 0.8rem 0;
+}
+
+/* Controls */
+.controls {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto 1fr auto auto auto;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.btn {
+  background: #e8ecf6;
+  color: #1d2433;
+  border: none;
+  padding: 0.5rem 0.8rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn:hover {
+  background: #dae0ee;
+}
+.btn.primary {
+  background: #2e7be7;
+  color: #fff;
+}
+
+/* Sliders */
+.slider-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.slider-group label {
+  font-size: 0.85rem;
+  color: #444;
+}
+
+/* Customize */
+.customize {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+.customize .viz-style select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #d8dce6;
+  border-radius: 8px;
+}
+
+/* Equalizer */
+.eq-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+.eq-panel {
+  display: none;
+  margin-top: 0.6rem;
+  background: #f5f7fb;
+  border: 1px solid #e6e9f2;
+  border-radius: 12px;
+  padding: 0.6rem;
+}
+.eq-panel.show {
+  display: block;
+}
+.eq-panel .bands {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 0.4rem;
+}
+.eq-panel .bands .band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.eq-panel .bands .band label {
+  font-size: 0.8rem;
+  color: #555;
+  margin-bottom: 0.25rem;
+}
+.eq-panel .bands .band input[type="range"] {
+  writing-mode: bt-lr;
+  -webkit-appearance: slider-vertical;
+  width: 6px;
+  height: 120px;
+}
+
+/* Playlist sidebar */
+.playlists .playlist-details {
+  margin-top: 0.6rem;
+}
+.playlists .tracks li {
+  font-size: 0.92rem;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .app-grid {
+    grid-template-columns: 280px 1fr;
+  }
+  .playlists {
+    grid-column: span 2;
+  }
+}
+
 @media (max-width: 850px) {
   main {
     max-width: 98vw;
     padding: 1.2rem 1rem 1.3rem;
   }
-
+  .app-grid {
+    grid-template-columns: 1fr;
+  }
+  .library, .playlists {
+    order: 2;
+  }
+  .player-core {
+    order: 1;
+  }
 }
