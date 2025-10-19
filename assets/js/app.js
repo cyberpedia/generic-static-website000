@@ -21,10 +21,7 @@ const App = (() => {
     shuffle: false,
     repeat: false,
     timerInterval: null,
-    tsMode: false,        // advanced time-stretch mode
-    tsNode: null,         // PitchShifter node
-    tsPaused: false
-  };
+    };
 
   async function init() {
     await API.init();
@@ -182,50 +179,7 @@ const App = (() => {
     }).catch(err => console.error('Playback error', err));
   }
 
-  async function playTrackAdvanced(src) {
-    // disconnect media elements from eq input
-    try { state.gainA.disconnect(state.eq.input); } catch (_) {}
-    try { state.gainB.disconnect(state.eq.input); } catch (_) {}
-
-    // stop any existing ts node
-    if (state.tsNode) {
-      try { state.tsNode.disconnect(); } catch (_) {}
-      state.tsNode = null;
-    }
-
-    // fetch and decode audio buffer
-    const resp = await fetch(src);
-    const arr = await resp.arrayBuffer();
-    const buffer = await state.ctx.decodeAudioData(arr);
-
-    // instantiate PitchShifter from soundtouchjs
-    const node = new PitchShifter(state.ctx, buffer, 4096);
-    node.connect(state.eq.input);
-
-    // set tempo from UI
-    const r = Number(document.getElementById('rate').value || 1);
-    node.tempo = r;
-    node.rate = 1;
-    node.pitch = 1;
-
-    // update time periodically
-    if (state.timerInterval) clearInterval(state.timerInterval);
-    state.timerInterval = setInterval(() => {
-      const cur = node.timePlayed || 0;
-      const dur = buffer.duration || 0;
-      document.getElementById('track-time').textContent = `${API.fmtTime(cur)} / ${API.fmtTime(dur)}`;
-      if (cur >= dur) {
-        clearInterval(state.timerInterval);
-        onEnded();
-      }
-    }, 250);
-
-    // save node
-    state.tsNode = node;
-
-    // set play button state
-    document.getElementById('play').textContent = 'Pause';
-  }
+  // Advanced time-stretch mode removed due to module compatibility issues with CDN builds.
 
   function crossfade(inGain, outGain, seconds) {
     const now = state.ctx.currentTime;
@@ -314,11 +268,9 @@ const App = (() => {
 
     document.getElementById('rate').addEventListener('input', (e) => {
       const r = Number(e.target.value);
-      if (state.tsMode && state.tsNode) {
-        // advanced: change tempo (time-stretch) without pitch
-        try { state.tsNode.tempo = r; } catch (_) {}
-      } else {
-        state
+      state.audioA.playbackRate = r;
+      state.audioB.playbackRate = r;
+    });
 
     const pitchBtn = document.getElementById('pitch-lock');
     if (pitchBtn) {
@@ -376,24 +328,6 @@ const App = (() => {
       document.getElementById('eq-panel').classList.toggle('show');
     });
 
-    const advBtn = document.getElementById('advanced-stretch');
-    if (advBtn) {
-      advBtn.addEventListener('click', () => {
-        state.tsMode = !state.tsMode;
-        advBtn.classList.toggle('primary', state.tsMode);
-        if (state.tsMode && state.currentTrack) {
-          playTrack(state.currentTrack);
-        } else {
-          // reconnect media element sources
-          try { state.gainA.connect(state.eq.input); } catch (_) {}
-          try { state.gainB.connect(state.eq.input); } catch (_) {}
-          if (state.tsNode) {
-            try { state.tsNode.disconnect(); } catch (_) {}
-            state.tsNode = null;
-          }
-        }
-      });
-    }
     document.getElementById('eq-preset').addEventListener('change', (e) => {
       state.eq.setPreset(e.target.value);
     });
