@@ -26,38 +26,13 @@ const App = (() => {
   async function init() {
     await API.init();
 
-    state.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    state.master = state.ctx.createGain();
-    state.eq = new Equalizer(state.ctx);
-    state.analyser = state.ctx.createAnalyser();
-    state.analyser.fftSize = 2048;
-    state.analyser.smoothingTimeConstant = 0.8;
-
-    // Audio chain: sources -> eq -> analyser -> destination
-    state.eq.connect(state.analyser);
-    state.analyser.connect(state.ctx.destination);
-
-    // For recording visualizer + audio
-    state.recordingDest = state.ctx.createMediaStreamDestination();
-
-    // connect eq output to recording as well
-    state.eq.output.connect(state.recordingDest);
-
-    // setup audio elements
-    setupAudioElements();
-
-    // Visualizer
-    const canvas = document.getElementById('viz');
-    state.viz = new Visualizer(state.analyser, canvas);
-    state.viz.start();
-
+    // Do not create AudioContext until user gesture (mobile restriction)
     bindUI();
     await loadLibrary();
     PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack });
 
-    // default settings
+    // Default slider value; actual volume applied once AudioContext is created
     document.getElementById('volume').value = 0.9;
-    setVolume(0.9);
   }
 
   function setupAudioElements() {
@@ -129,11 +104,6 @@ const App = (() => {
     // Update UI info
     document.getElementById('track-title').textContent = track.name || track.path;
     state.currentTrack = { path: track.path, name: track.name };
-
-    if (state.tsMode) {
-      playTrackAdvanced(src);
-      return;
-    }
 
     const useA = state.useA;
 
@@ -216,19 +186,9 @@ const App = (() => {
   }
 
   function bindUI() {
-    document.getElementById('play').addEventListener('click', () => {
-      if (state.tsMode && state.tsNode) {
-        if (state.tsPaused) {
-          try { state.tsNode.connect(state.eq.input); } catch (_) {}
-          state.tsPaused = false;
-          document.getElementById('play').textContent = 'Pause';
-        } else {
-          try { state.tsNode.disconnect(); } catch (_) {}
-          state.tsPaused = true;
-          document.getElementById('play').textContent = 'Play';
-        }
-        return;
-      }
+    document.getElementById('play').addEventListener('click', async () => {
+      // Ensure AudioContext resumed per user gesture
+      try { if (state.ctx && state.ctx.state === 'suspended') await state.ctx.resume(); } catch (_) {}
 
       const active = state.useA ? state.audioB : state.audioA;
       if (active.paused) {

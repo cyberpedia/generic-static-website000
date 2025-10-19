@@ -322,3 +322,31 @@ canvas#viz {
     height: 24px;
   }
 }
+
+/* Extra-small screens */
+@media (max-width: 480px) {
+  header { padding: 0.8rem 0; }
+  main {
+    margin: 1rem auto 0 auto;
+    padding: 0.8rem;
+    border-radius: 12px;
+  }
+  .art-and-info {
+    grid-template-columns: 96px 1fr;
+  }
+  .art {
+    width: 96px;
+    height: 96px;
+    border-radius: 10px;
+  }
+  .track-title {
+    font-size: 1rem;
+  }
+  .track-time {
+    font-size: 0.85rem;
+  }
+  .customize {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+}
