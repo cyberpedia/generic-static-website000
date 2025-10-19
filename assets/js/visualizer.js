@@ -88,12 +88,20 @@ class Visualizer {
 
   drawBars(w, h) {
     this.analyser.getFloatFrequencyData(this.freqFloat);
+    // Compute peak to adapt bar scaling
+    let peak = 0;
+    for (let i = 0; i < this.freqFloat.length; i++) {
+      const v = this.norm(this.freqFloat[i]);
+      if (v > peak) peak = v;
+    }
+    const gain = 1.0 / Math.max(0.35, peak + 0.05);
+
     const bins = 96;
     const bw = w / bins;
     for (let i = 0; i < bins; i++) {
-      const idx = this.sampleIndex(i, bins, 2.2);
+      const idx = this.sampleIndex(i, bins, 2.0);
       const v = this.norm(this.freqFloat[idx]);
-      const bh = Math.pow(v, 1.25) * h; // emphasize dynamics
+      const bh = Math.pow(v, 1.2) * h * gain; // adaptive scaling
       ctxRoundRect(this.ctx, i * bw + 2, h - bh, bw - 4, bh, 4);
       this.ctx.fill();
     }
@@ -113,18 +121,28 @@ class Visualizer {
   }
 
   drawCircle(w, h) {
-    this.analyser.getFloatFrequencyData(this.freqFloat);
-    const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-    const bins = 96;
-    for (let i = 0; i < bins; i++) {
-      const angle = (i / bins) * Math.PI * 2;
-      const idx = this.sampleIndex(i, bins, 2.0);
-      const v = this.norm(this.freqFloat[idx]);
-      const len = r + Math.pow(v, 1.35) * (h / 3);
+    // Time-domain circle (uniform distribution around full ring)
+    this.analyser.getByteTimeDomainData(this.timeData);
+
+    // Compute adaptive gain to keep motion lively regardless of input level
+    let peak = 0;
+    for (let i = 0; i < this.timeData.length; i++) {
+      const v = Math.abs((this.timeData[i] - 128) / 128.0);
+      if (v > peak) peak = v;
+    }
+    const targetGain = 0.9 / Math.max(0.2, peak + 0.05);
+    this.ampGain = this.ampGain ? (this.ampGain * 0.85 + targetGain * 0.15) : targetGain;
+
+    const cx = w / 2, cy = h / 2, base = Math.min(w, h) / 3;
+    const n = this.timeData.length;
+    for (let i = 0; i < n; i++) {
+      const angle = (i / n) * Math.PI * 2;
+      const v = (this.timeData[i] - 128) / 128.0;
+      const len = base + (v * (h / 3)) * this.ampGain;
       const x = cx + Math.cos(angle) * len;
       const y = cy + Math.sin(angle) * len;
       this.ctx.beginPath();
-      this.ctx.arc(x, y, 3 + v * 6, 0, Math.PI * 2);
+      this.ctx.arc(x, y, 2.5 + Math.abs(v) * 4, 0, Math.PI * 2);
       this.ctx.fill();
     }
   }

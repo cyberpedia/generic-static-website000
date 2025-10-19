@@ -320,19 +320,26 @@ canvas#viz {
   }
 }
 
+/* Collapse to single column earlier so phones don't see split layout */
+@media (max-width: 1024px) {
+  .app-grid {
+    grid-template-columns: 1fr;
+  }
+  .player-core {
+    order: 1;
+  }
+  .playlists {
+    order: 2; /* show playlists directly under player core */
+  }
+  .library {
+    order: 3; /* library below playlists */
+  }
+}
+
 @media (max-width: 850px) {
   main {
     max-width: 98vw;
     padding: 1.2rem 1rem 1.3rem;
-  }
-  .app-grid {
-    grid-template-columns: 1fr;
-  }
-  .library, .playlists {
-    order: 2;
-  }
-  .player-core {
-    order: 1;
   }
 }
 
