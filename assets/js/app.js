@@ -24,15 +24,47 @@ const App = (() => {
     };
 
   async function init() {
-    await API.init();
+    try {
+      await API.init();
+    } catch (e) {
+      console.warn('API init failed, continuing without session', e);
+    }
 
-    // Do not create AudioContext until user gesture (mobile restriction)
+    // Defer AudioContext creation to first user gesture (mobile autoplay policy)
     bindUI();
     await loadLibrary();
     PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack });
 
     // Default slider value; actual volume applied once AudioContext is created
     document.getElementById('volume').value = 0.9;
+  }
+
+  function ensureAudioContext() {
+    if (state.ctx) return;
+
+    state.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    state.master = state.ctx.createGain();
+    state.eq = new Equalizer(state.ctx);
+    state.analyser = state.ctx.createAnalyser();
+    state.analyser.fftSize = 2048;
+    state.analyser.smoothingTimeConstant = 0.8;
+
+    // Audio chain: sources -> eq -> analyser -> destination
+    state.eq.connect(state.analyser);
+    state.analyser.connect(state.ctx.destination);
+
+    // For recording visualizer + audio
+    state.recordingDest = state.ctx.createMediaStreamDestination();
+    state.eq.output.connect(state.recordingDest);
+
+    // setup audio elements and visualizer
+    setupAudioElements();
+    const canvas = document.getElementById('viz');
+    state.viz = new Visualizer(state.analyser, canvas);
+    state.viz.start();
+
+    // apply initial volume
+    setVolume(Number(document.getElementById('volume').value || 0.9));
   }
 
   function setupAudioElements() {
@@ -67,9 +99,10 @@ const App = (() => {
   }
 
   async function loadLibrary(rescan = false) {
-    const data = await API.get('api/library.php', { page: 0, size: 500, rescan: rescan ? 1 : undefined });
-    state.library = data.items || [];
-    renderLibrary();
+    try {
+      const params = { page: 0, size: 500 };
+      if (rescan) params.rescan = 1;
+      const data = await API.get('api/library.php', paramsenderLibrary();
   }
 
   function renderLibrary(list = null) {
@@ -99,7 +132,9 @@ const App = (() => {
   }
 
   function playTrack(track) {
-    const src = 'assets/music/' + track.path;
+    ensureAudioContext();
+
+    const src = 'assets/music/' + encodeURI(track.path);
 
     // Update UI info
     document.getElementById('track-title').textContent = track.name || track.path;
@@ -111,6 +146,8 @@ const App = (() => {
     const outgoing = useA ? state.audioA : state.audioB;
     const incomingGain = useA ? state.gainB : state.gainA;
     const outgoingGain = useA ? state.gainA : state.gainB;
+
+    if (!incoming || !outgoing) return;
 
     incoming.pause();
     incoming.src = src;
@@ -143,7 +180,7 @@ const App = (() => {
     }, { once: true });
 
     incoming.play().then(() => {
-      crossfade(incomingGain, outgoingGain, state.crossfade);
+      if (state.ctx) crossfade(incomingGain, outgoingGain, state.crossfade);
       state.useA = !state.useA;
       document.getElementById('play').textContent = 'Pause';
     }).catch(err => console.error('Playback error', err));
@@ -152,6 +189,7 @@ const App = (() => {
   // Advanced time-stretch mode removed due to module compatibility issues with CDN builds.
 
   function crossfade(inGain, outGain, seconds) {
+    if (!state.ctx) return;
     const now = state.ctx.currentTime;
     inGain.gain.cancelScheduledValues(now);
     outGain.gain.cancelScheduledValues(now);
@@ -167,6 +205,7 @@ const App = (() => {
     const a = state.audioA;
     const b = state.audioB;
     const active = state.useA ? b : a;
+    if (!active) return;
     const dur = active.duration || 0;
     const cur = active.currentTime || 0;
     document.getElementById('track-time').textContent = `${API.fmtTime(cur)} / ${API.fmtTime(dur)}`;
@@ -187,10 +226,12 @@ const App = (() => {
 
   function bindUI() {
     document.getElementById('play').addEventListener('click', async () => {
+      ensureAudioContext();
       // Ensure AudioContext resumed per user gesture
       try { if (state.ctx && state.ctx.state === 'suspended') await state.ctx.resume(); } catch (_) {}
 
       const active = state.useA ? state.audioB : state.audioA;
+      if (!active) return;
       if (active.paused) {
         active.play();
         document.getElementById('play').textContent = 'Pause';
@@ -262,6 +303,16 @@ const App = (() => {
         await loadLibrary(true);
       });
     }
+    const importBtnMobile = document.getElementById('import-url-btn-mobile');
+    if (importBtnMobile) {
+      importBtnMobile.addEventListener('click', async () => {
+        const url = (document.getElementById('import-url-mobile').value || '').trim();
+        if (!url) return;
+        const res = await API.post('api/remote_import.php', { url });
+        if (!res.ok) alert(res.error || 'Import failed');
+        await loadLibrary(true);
+      });
+    }
 
     const up = document.getElementById('upload-input');
     up.addEventListener('change', async () => {
@@ -273,6 +324,18 @@ const App = (() => {
       await loadLibrary(true);
       up.value = '';
     });
+    const upMobile = document.getElementById('upload-input-mobile');
+    if (upMobile) {
+      upMobile.addEventListener('change', async () => {
+        const files = Array.from(upMobile.files || []);
+        for (const f of files) {
+          const res = await API.upload('api/upload.php', f);
+          if (!res.ok) alert(res.error || 'Upload failed');
+        }
+        await loadLibrary(true);
+        upMobile.value = '';
+      });
+    }
 
     document.getElementById('viz-style').addEventListener('change', (e) => {
       state.viz.setStyle(e.target.value);

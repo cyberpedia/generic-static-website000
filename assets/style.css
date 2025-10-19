@@ -77,6 +77,16 @@ footer {
   flex-wrap: wrap;
 }
 
+.library .toolbar:first-child {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f7f8fb;
+  padding: 0.6rem;
+  margin: -0.6rem -0.6rem 0.6rem -0.6rem;
+  border-bottom: 1px solid #e6e9f2;
+}
+
 .sidebar .toolbar input[type="text"] {
   flex: 1;
   padding: 0.45rem 0.6rem;
@@ -110,6 +120,31 @@ footer {
   padding: 0;
   overflow-y: auto;
   flex: 1;
+}
+
+.mobile-actions {
+  display: none;
+}
+@media (max-width: 600px) {
+  .mobile-actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    position: sticky;
+    bottom: 0;
+    background: #f7f8fb;
+    padding: 0.6rem;
+    margin: 0 -0.6rem -0.6rem -0.6rem;
+    border-top: 1px solid #e6e9f2;
+    z-index: 10;
+  }
+  .mobile-actions input[type="url"] {
+    flex: 1;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #d8dce6;
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
 }
 .list li {
   display: flex;

@@ -1,8 +1,32 @@
 const API = (() => {
   const state = { csrf: null, allowed: [], uploadMax: null };
 
+  // Build URL under current directory (supports subfolders like /Djweb-main/)
+  const basePath = (() => {
+    const p = window.location.pathname;
+    if (p.endsWith('/')) return p;
+    const i = p.lastIndexOf('/');
+    return i >= 0 ? p.slice(0, i + 1) : '/';
+  })();
+
+  function buildURL(path, params = {}) {
+    // Absolute URL passthrough
+    if (/^https?:\/\//i.test(path)) {
+      const url = new URL(path);
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null) url.searchParams.set(k, v);
+      }
+      return url.toString();
+    }
+    const url = new URL(basePath + path.replace(/^\//, ''), window.location.origin);
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null) url.searchParams.set(k, v);
+    }
+    return url.toString();
+  }
+
   async function init() {
-    const res = await fetch('api/session.php', { credentials: 'same-origin' });
+    const res = await fetch(buildURL('api/session.php'), { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
     const json = await res.json();
     state.csrf = json.csrf;
     state.allowed = json.allowed_extensions || [];
@@ -11,35 +35,46 @@ const API = (() => {
   }
 
   async function get(path, params = {}) {
-    const url = new URL(path, window.location.origin);
-    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-    const res = await fetch(url.toString(), { credentials: 'same-origin' });
-    return res.json();
+    const url = buildURL(path, params);
+    const res = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) return res.json();
+    const text = await res.text();
+    throw new Error(`Unexpected response: ${text.slice(0, 120)}`);
   }
 
   async function post(path, body = {}) {
-    const res = await fetch(path, {
+    const url = buildURL(path);
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': state.csrf
+        'X-CSRF-Token': state.csrf,
+        'Accept': 'application/json'
       },
       credentials: 'same-origin',
       body: JSON.stringify(body)
     });
-    return res.json();
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) return res.json();
+    const text = await res.text();
+    throw new Error(`Unexpected response: ${text.slice(0, 120)}`);
   }
 
   async function upload(path, file) {
+    const url = buildURL(path);
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(path, {
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { 'X-CSRF-Token': state.csrf },
+      headers: { 'X-CSRF-Token': state.csrf, 'Accept': 'application/json' },
       credentials: 'same-origin',
       body: form
     });
-    return res.json();
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) return res.json();
+    const text = await res.text();
+    throw new Error(`Unexpected response: ${text.slice(0, 120)}`);
   }
 
   function fmtTime(sec) {
