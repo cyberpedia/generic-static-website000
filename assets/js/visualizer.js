@@ -166,8 +166,8 @@ class Visualizer {
     const w = canvas.width / (window.devicePixelRatio || 1);
     const h = canvas.height / (window.devicePixelRatio || 1);
 
-    // trail effect for circle/radial styles
-    const trailStyles = new Set(['circle', 'radial', 'ring', 'particles']);
+    // trail effect for select styles; circle keeps a crisp ring
+    const trailStyles = new Set(['radial', 'ring', 'particles']);
     if (this.trail && trailStyles.has(this.style)) {
       ctx.fillStyle = 'rgba(15,19,34,0.08)';
       ctx.fillRect(0, 0, w, h);
@@ -326,31 +326,36 @@ class Visualizer {
   }
 
   drawCircle(w, h) {
+    // crisp base ring + controlled amplitude spikes
     const bins = 180;
     const { levels } = this.getSpectrum(bins, 2.1);
 
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 
-    // base ring
+    // draw a continuous base ring (no dots) for perfect circle
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    this.ctx.lineWidth = 3.5;
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    // amplitude spikes: moderate scale to prevent clumps
+    const spikeScale = Math.min(h / 4, r * 0.65);
     for (let i = 0; i < bins; i++) {
-      const angle = (i / bins) * Math.PI * 2;
+      const angle = (i / bins) * Math.PI * 2 + this.angle * 0.25;
+      const v = levels[i];
+      const len = r + Math.pow(v, 1.15) * spikeScale;
       const x0 = cx + Math.cos(angle) * r;
       const y0 = cy + Math.sin(angle) * r;
-      this.ctx.beginPath();
-      this.ctx.arc(x0, y0, 1.8, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
+      const x1 = cx + Math.cos(angle) * len;
+      const y1 = cy + Math.sin(angle) * len;
 
-    // amplitude dots along full circle
-    for (let i = 0; i < bins; i++) {
-      const angle = (i / bins) * Math.PI * 2 + this.angle * 0.4;
-      const v = levels[i];
-      const len = r + Math.pow(v, 1.25) * (h / 3);
-      const x = cx + Math.cos(angle) * len;
-      const y = cy + Math.sin(angle) * len;
       this.ctx.beginPath();
-      this.ctx.arc(x, y, 2.2 + v * 4.0, 0, Math.PI * 2);
-      this.ctx.fill();
+      this.ctx.moveTo(x0, y0);
+      this.ctx.lineTo(x1, y1);
+      this.ctx.lineWidth = 1.8 + v * 2.2;
+      this.ctx.stroke();
     }
   }
 
