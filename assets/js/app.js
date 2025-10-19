@@ -102,7 +102,13 @@ const App = (() => {
     try {
       const params = { page: 0, size: 500 };
       if (rescan) params.rescan = 1;
-      const data = await API.get('api/library.php', paramsenderLibrary();
+      const data = await API.get('api/library.php', params);
+      state.library = data.items || [];
+    } catch (err) {
+      console.warn('Library load failed:', err);
+      state.library = [];
+    }
+    renderLibrary();
   }
 
   function renderLibrary(list = null) {
@@ -230,6 +236,12 @@ const App = (() => {
       // Ensure AudioContext resumed per user gesture
       try { if (state.ctx && state.ctx.state === 'suspended') await state.ctx.resume(); } catch (_) {}
 
+      // If no track selected yet, start with first in library
+      if (!state.currentTrack && state.library.length > 0) {
+        playIndex(0);
+        return;
+      }
+
       const active = state.useA ? state.audioB : state.audioA;
       if (!active) return;
       if (active.paused) {
@@ -322,6 +334,10 @@ const App = (() => {
         if (!res.ok) alert(res.error || 'Upload failed');
       }
       await loadLibrary(true);
+      // auto-play the last track after upload
+      if (state.library.length > 0) {
+        playIndex(state.library.length - 1);
+      }
       up.value = '';
     });
     const upMobile = document.getElementById('upload-input-mobile');
