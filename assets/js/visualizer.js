@@ -20,6 +20,9 @@ class Visualizer {
     this.peaks = new Float32Array(this.analyser.frequencyBinCount);
     this.ampGain = 1;
 
+    // coverage multiplier around the circle (ensure full 360° even with few bins)
+    this.segments = 4;
+
     // particles
     this.particles = [];
     this.maxParticles = 200;
@@ -116,6 +119,47 @@ class Visualizer {
     return Math.min(l - 1, Math.floor(Math.pow(t, gamma) * (l - 1)));
   }
 
+  setSegments(n) {
+    const v = Number(n) || this.segments;
+    this.segments = Math.max(1, Math.min(8, v));
+  }
+
+  getSpectrum(bins, gamma = 2.0) {
+    this.analyser.getFloatFrequencyData(this.freqFloat);
+
+    // peak for adaptive scaling
+    let peak = 0;
+    for (let i = 0; i < this.freqFloat.length; i++) {
+      peak = Math.max(peak, this.norm(this.freqFloat[i]));
+    }
+    const gain = 1.0 / Math.max(0.35, peak + 0.05);
+
+    const levels = new Array(bins).fill(0);
+    for (let i = 0; i < bins; i++) {
+      const idx = this.sampleIndex(i, bins, gamma);
+      // local smoothing
+      let acc = 0, cnt = 0;
+      for (let j = -2; j <= 2; j++) {
+        const k = Math.max(0, Math.min(this.freqFloat.length - 1, idx + j));
+        acc += this.norm(this.freqFloat[k]);
+        cnt++;
+      }
+      let v = (acc / cnt);
+      // minimum floor so high bins still visible
+      const floor = 0.08;
+      v = floor + v * (1 - floor);
+      levels[i] = Math.pow(v, 1.15) * gain;
+    }
+    // peak-hold per bin
+    if (!this.barPeaks || this.barPeaks.length !== bins) {
+      this.barPeaks = new Float32Array(bins);
+    }
+    for (let i = 0; i < bins; i++) {
+      this.barPeaks[i] = Math.max(this.barPeaks[i] * this.decay, levels[i]);
+    }
+    return { levels, peaks: this.barPeaks, gain };
+  }
+
   draw() {
     const { ctx, canvas } = this;
     const w = canvas.width / (window.devicePixelRatio || 1);
@@ -151,21 +195,12 @@ class Visualizer {
   }
 
   drawBars(w, h) {
-    this.analyser.getFloatFrequencyData(this.freqFloat);
-    // Compute peak to adapt bar scaling
-    let peak = 0;
-    for (let i = 0; i < this.freqFloat.length; i++) {
-      const v = this.norm(this.freqFloat[i]);
-      if (v > peak) peak = v;
-    }
-    const gain = 1.0 / Math.max(0.35, peak + 0.05);
-
     const bins = 96;
+    const { peaks } = this.getSpectrum(bins, 2.0);
     const bw = w / bins;
     for (let i = 0; i < bins; i++) {
-      const idx = this.sampleIndex(i, bins, 2.0);
-      const v = this.norm(this.freqFloat[idx]);
-      const bh = Math.pow(v, 1.2) * h * gain; // adaptive scaling
+      const v = peaks[i];
+      const bh = v * h;
       ctxRoundRect(this.ctx, i * bw + 2, h - bh, bw - 4, bh, 4);
       this.ctx.fill();
     }
@@ -238,19 +273,17 @@ class Visualizer {
     this.lastTS = now;
     this.angle += this.rotation * dt;
 
-    this.analyser.getFloatFrequencyData(this.freqFloat);
+    const bins = 64;
+    const { levels, peaks } = this.getSpectrum(bins, 2.0);
 
-    let peak = 0, avg = 0;
-    for (let i = 0; i < this.freqFloat.length; i++) {
-      const v = this.norm(this.freqFloat[i]);
-      if (v > peak) peak = v;
-      avg += v;
-    }
-    avg /= this.freqFloat.length;
-    const gain = 1.0 / Math.max(0.35, peak + 0.05);
+    // avg for beat ring
+    let avg = 0;
+    for (let i = 0; i < bins; i++) avg += levels[i];
+    avg /= bins;
 
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-    const bins = 96;
+    const segs = this.segments;
+    const total = bins * segs;
 
     // Beat ring pulse
     const beatRadius = r + Math.pow(avg, 1.2) * (h / 12);
@@ -265,60 +298,47 @@ class Visualizer {
     this.ctx.save();
     this.ctx.lineCap = 'round';
 
-    for (let i = 0; i < bins; i++) {
-      const idx = this.sampleIndex(i, bins, 2.0);
-      const v = this.norm(this.freqFloat[idx]);
-      // peak hold with decay
-      this.peaks[idx] = Math.max(this.peaks[idx] * this.decay, v);
-      const pv = this.peaks[idx];
+    for (let s = 0; s < segs; s++) {
+      for (let i = 0; i < bins; i++) {
+        const pv = peaks[i];
+        const angle = ((i + s * bins) / total) * Math.PI * 2 + this.angle;
+        const len = r + Math.pow(pv, 1.25) * (h / 3);
+        const x0 = cx + Math.cos(angle) * r;
+        const y0 = cy + Math.sin(angle) * r;
+        const x1 = cx + Math.cos(angle) * len;
+        const y1 = cy + Math.sin(angle) * len;
 
-      const angle = (i / bins) * Math.PI * 2 + this.angle;
-      const len = r + Math.pow(pv, 1.25) * (h / 3) * gain;
-      const x0 = cx + Math.cos(angle) * r;
-      const y0 = cy + Math.sin(angle) * r;
-      const x1 = cx + Math.cos(angle) * len;
-      const y1 = cy + Math.sin(angle) * len;
+        const t = (i + s * bins) / (total - 1);
+        this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
+        this.ctx.lineWidth = 2.5 + pv * 4;
 
-      // color along angle
-      const t = i / (bins - 1);
-      this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
-      this.ctx.lineWidth = 2.5 + pv * 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x0, y0);
+        this.ctx.lineTo(x1, y1);
+        this.ctx.stroke();
 
-      // bar
-      this.ctx.beginPath();
-      this.ctx.moveTo(x0, y0);
-      this.ctx.lineTo(x1, y1);
-      this.ctx.stroke();
-
-      // peak marker dot
-      const px = cx + Math.cos(angle) * (r + Math.pow(pv, 1.25) * (h / 3) * gain + 4);
-      const py = cy + Math.sin(angle) * (r + Math.pow(pv, 1.25) * (h / 3) * gain + 4);
-      this.ctx.beginPath();
-      this.ctx.arc(px, py, 2.2, 0, Math.PI * 2);
-      this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      this.ctx.fill();
+        // cap dot
+        this.ctx.beginPath();
+        this.ctx.arc(x1, y1, 2.4 + pv * 3, 0, Math.PI * 2);
+        this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        this.ctx.fill();
+      }
     }
 
     this.ctx.restore();
   }
 
   drawCircle(w, h) {
-    // Frequency-domain circle with a base ring + adaptive spikes
-    this.analyser.getFloatFrequencyData(this.freqFloat);
-
-    let peak = 0;
-    for (let i = 0; i < this.freqFloat.length; i++) {
-      const v = this.norm(this.freqFloat[i]);
-      if (v > peak) peak = v;
-    }
-    const gain = 1.0 / Math.max(0.35, peak + 0.05);
+    const bins = 64;
+    const { levels } = this.getSpectrum(bins, 2.0);
 
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-    const bins = 128;
+    const segs = this.segments;
+    const total = bins * segs;
 
     // base ring
-    for (let i = 0; i < bins; i++) {
-      const angle = (i / bins) * Math.PI * 2;
+    for (let k = 0; k < total; k++) {
+      const angle = (k / total) * Math.PI * 2;
       const x0 = cx + Math.cos(angle) * r;
       const y0 = cy + Math.sin(angle) * r;
       this.ctx.beginPath();
@@ -327,16 +347,17 @@ class Visualizer {
     }
 
     // amplitude dots
-    for (let i = 0; i < bins; i++) {
-      const angle = (i / bins) * Math.PI * 2;
-      const idx = this.sampleIndex(i, bins, 2.0);
-      const v = this.norm(this.freqFloat[idx]);
-      const len = r + Math.pow(v, 1.25) * (h / 3) * gain;
-      const x = cx + Math.cos(angle) * len;
-      const y = cy + Math.sin(angle) * len;
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, 2.5 + v * 5, 0, Math.PI * 2);
-      this.ctx.fill();
+    for (let s = 0; s < segs; s++) {
+      for (let i = 0; i < bins; i++) {
+        const angle = ((i + s * bins) / total) * Math.PI * 2 + this.angle * 0.5;
+        const v = levels[i];
+        const len = r + Math.pow(v, 1.25) * (h / 3);
+        const x = cx + Math.cos(angle) * len;
+        const y = cy + Math.sin(angle) * len;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, 2.5 + v * 5, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
     }
   }
 
