@@ -1,2 +1,2 @@
-// Optional JavaScript goes here
-console.log("Static site loaded!");
+// Avee-like player utilities loaded
+console.log("Avee-like player assets loaded");
