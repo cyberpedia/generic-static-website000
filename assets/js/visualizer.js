@@ -21,7 +21,8 @@ class Visualizer {
     this.ampGain = 1;
 
     // coverage multiplier around the circle (ensure full 360° even with few bins)
-    this.segments = 4;
+    // Set to 1 to avoid duplicated arcs; we fill the circle by using more bins instead.
+    this.segments = 1;
 
     // particles
     this.particles = [];
@@ -273,8 +274,8 @@ class Visualizer {
     this.lastTS = now;
     this.angle += this.rotation * dt;
 
-    const bins = 64;
-    const { levels, peaks } = this.getSpectrum(bins, 2.0);
+    const bins = 180; // enough bars to fill full circle without duplication
+    const { levels, peaks } = this.getSpectrum(bins, 2.1);
 
     // avg for beat ring
     let avg = 0;
@@ -282,82 +283,74 @@ class Visualizer {
     avg /= bins;
 
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-    const segs = this.segments;
-    const total = bins * segs;
 
     // Beat ring pulse
-    const beatRadius = r + Math.pow(avg, 1.2) * (h / 12);
+    const beatRadius = r + Math.pow(avg, 1.2) * (h / 16);
     this.ctx.save();
     this.ctx.beginPath();
     this.ctx.arc(cx, cy, beatRadius, 0, Math.PI * 2);
     this.ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    this.ctx.lineWidth = 3;
+    this.ctx.lineWidth = 2.5;
     this.ctx.stroke();
     this.ctx.restore();
 
     this.ctx.save();
     this.ctx.lineCap = 'round';
 
-    for (let s = 0; s < segs; s++) {
-      for (let i = 0; i < bins; i++) {
-        const pv = peaks[i];
-        const angle = ((i + s * bins) / total) * Math.PI * 2 + this.angle;
-        const len = r + Math.pow(pv, 1.25) * (h / 3);
-        const x0 = cx + Math.cos(angle) * r;
-        const y0 = cy + Math.sin(angle) * r;
-        const x1 = cx + Math.cos(angle) * len;
-        const y1 = cy + Math.sin(angle) * len;
+    for (let i = 0; i < bins; i++) {
+      const pv = peaks[i];
+      const angle = (i / bins) * Math.PI * 2 + this.angle;
+      const len = r + Math.pow(pv, 1.25) * (h / 3);
+      const x0 = cx + Math.cos(angle) * r;
+      const y0 = cy + Math.sin(angle) * r;
+      const x1 = cx + Math.cos(angle) * len;
+      const y1 = cy + Math.sin(angle) * len;
 
-        const t = (i + s * bins) / (total - 1);
-        this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
-        this.ctx.lineWidth = 2.5 + pv * 4;
+      const t = i / (bins - 1);
+      this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
+      this.ctx.lineWidth = 2.2 + pv * 3.8;
 
-        this.ctx.beginPath();
-        this.ctx.moveTo(x0, y0);
-        this.ctx.lineTo(x1, y1);
-        this.ctx.stroke();
+      this.ctx.beginPath();
+      this.ctx.moveTo(x0, y0);
+      this.ctx.lineTo(x1, y1);
+      this.ctx.stroke();
 
-        // cap dot
-        this.ctx.beginPath();
-        this.ctx.arc(x1, y1, 2.4 + pv * 3, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        this.ctx.fill();
-      }
+      // cap dot
+      this.ctx.beginPath();
+      this.ctx.arc(x1, y1, 2.2 + pv * 2.8, 0, Math.PI * 2);
+      this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      this.ctx.fill();
     }
 
     this.ctx.restore();
   }
 
   drawCircle(w, h) {
-    const bins = 64;
-    const { levels } = this.getSpectrum(bins, 2.0);
+    const bins = 180;
+    const { levels } = this.getSpectrum(bins, 2.1);
 
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-    const segs = this.segments;
-    const total = bins * segs;
 
     // base ring
-    for (let k = 0; k < total; k++) {
-      const angle = (k / total) * Math.PI * 2;
+    for (let i = 0; i < bins; i++) {
+      const angle = (i / bins) * Math.PI * 2;
       const x0 = cx + Math.cos(angle) * r;
       const y0 = cy + Math.sin(angle) * r;
       this.ctx.beginPath();
-      this.ctx.arc(x0, y0, 2.0, 0, Math.PI * 2);
+      this.ctx.arc(x0, y0, 1.8, 0, Math.PI * 2);
       this.ctx.fill();
     }
 
-    // amplitude dots
-    for (let s = 0; s < segs; s++) {
-      for (let i = 0; i < bins; i++) {
-        const angle = ((i + s * bins) / total) * Math.PI * 2 + this.angle * 0.5;
-        const v = levels[i];
-        const len = r + Math.pow(v, 1.25) * (h / 3);
-        const x = cx + Math.cos(angle) * len;
-        const y = cy + Math.sin(angle) * len;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, 2.5 + v * 5, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
+    // amplitude dots along full circle
+    for (let i = 0; i < bins; i++) {
+      const angle = (i / bins) * Math.PI * 2 + this.angle * 0.4;
+      const v = levels[i];
+      const len = r + Math.pow(v, 1.25) * (h / 3);
+      const x = cx + Math.cos(angle) * len;
+      const y = cy + Math.sin(angle) * len;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, 2.2 + v * 4.0, 0, Math.PI * 2);
+      this.ctx.fill();
     }
   }
 
