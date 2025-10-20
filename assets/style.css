@@ -222,6 +222,7 @@ footer {
   box-shadow: 0 20px 60px rgba(0,0,0,0.45);
   max-width: clamp(320px, 92vw, 900px);
   margin: 0 auto; /* center the panel */
+  overflow-x: hidden; /* prevent any horizontal overflow */
 }
 .viz-title {
   font-size: clamp(1.6rem, 5.4vw, 2.6rem);
@@ -254,6 +255,10 @@ footer {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+}
+.panel-head .panel-actions {
+  display: inline-flex;
+  gap: 8px;
 }
 .panel-head h3 {
   margin: 0;
@@ -469,9 +474,12 @@ canvas#viz {
   border-radius: 10px;
   padding: 0.35rem 0.6rem;
   color: #c9d7ff;
+  width: 100%;            /* ensure the slider row never exceeds panel width */
 }
 .customize .viz-tuning input[type="range"] {
-  width: 140px;
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 auto;
 }
 
 .customize .presets input[type="text"], .customize .presets select {
@@ -592,8 +600,8 @@ canvas#viz {
 /* Tablet / small laptop adjustments */
 @media (max-width: 900px) {
   main {
-    max-width: 98vw;
-    padding: 1.2rem 1rem 1.3rem;
+    max-width: 100vw;
+    padding: 1rem;
   }
   .controls {
     grid-template-columns: repeat(4, auto);
@@ -603,11 +611,11 @@ canvas#viz {
     grid-column: span 4;
   }
   .customize {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* single column on tablets/phones */
     gap: 0.8rem;
   }
   .customize .viz-tuning {
-    grid-template-columns: repeat(3, minmax(140px, 1fr));
+    grid-template-columns: 1fr; /* one slider per row */
   }
 }
 

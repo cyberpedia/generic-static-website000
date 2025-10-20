@@ -29,6 +29,9 @@ const App = (() => {
     };
 
   async function init() {
+    // Ensure audio debug disabled unless explicitly enabled
+    try { if (typeof window.AUDIO_DEBUG === 'undefined') window.AUDIO_DEBUG = false; } catch (_) {}
+
     try {
       await API.init();
     } catch (e) {
@@ -190,7 +193,7 @@ const App = (() => {
         });
       });
     };
-    if (window.DEBUG) {
+    if (window.AUDIO_DEBUG) {
       logAudioEvents('A', state.audioA);
       logAudioEvents('B', state.audioB);
     }
@@ -419,15 +422,31 @@ ${item.name}`);
     playIndex(nextIndex);
   }
 
+  // Throttled action logger
+  const throttles = {};
+  function logAction(name, data = {}, key = null, interval = 200) {
+    try {
+      if (!window.BUG || !window.DEBUG) return;
+      if (key) {
+        const now = performance.now();
+        const last = throttles[key] || 0;
+        if (now - last < interval) return;
+        throttles[key] = now;
+      }
+      BUG.log(name, data);
+    } catch (_) {}
+  }
+
   function bindUI() {
     document.getElementById('play').addEventListener('click', async () => {
       ensureAudioContext();
-      try { if (window.BUG) BUG.log('playButton'); } catch (_) {}
+      logAction('player.playButton');
       // Ensure AudioContext resumed per user gesture
       try { if (state.ctx && state.ctx.state === 'suspended') await state.ctx.resume(); } catch (_) {}
 
       // If no track selected yet, start with first in library
       if (!state.currentTrack && state.library.length > 0) {
+        logAction('player.autoplayFirst');
         playIndex(0);
         return;
       }
@@ -437,17 +456,19 @@ ${item.name}`);
       if (active.paused) {
         active.play().then(() => {
           document.getElementById('play').textContent = 'Pause';
+          logAction('player.play');
         }).catch(err => {
           console.error('Play toggle error', err);
-          try { if (window.BUG) BUG.error('playButton.play', err); } catch (_) {}
+          logAction('player.play.error', { message: err.message });
         });
       } else {
         try {
           active.pause();
           document.getElementById('play').textContent = 'Play';
+          logAction('player.pause');
         } catch (err) {
           console.error('Pause toggle error', err);
-          try { if (window.BUG) BUG.error('playButton.pause', err); } catch (_) {}
+          logAction('player.pause.error', { message: err.message });
         }
       }
     });
@@ -455,33 +476,40 @@ ${item.name}`);
     document.getElementById('prev').addEventListener('click', () => {
       let i = state.currentIndex - 1;
       if (i < 0) i = state.library.length - 1;
+      logAction('player.prev', { index: i });
       playIndex(i);
     });
 
     document.getElementById('next').addEventListener('click', () => {
       let i = state.currentIndex + 1;
       if (i >= state.library.length) i = 0;
+      logAction('player.next', { index: i });
       playIndex(i);
     });
 
     document.getElementById('shuffle').addEventListener('click', () => {
       state.shuffle = !state.shuffle;
       document.getElementById('shuffle').classList.toggle('primary', state.shuffle);
+      logAction('player.shuffle', { on: state.shuffle });
     });
 
     document.getElementById('repeat').addEventListener('click', () => {
       state.repeat = !state.repeat;
       document.getElementById('repeat').classList.toggle('primary', state.repeat);
+      logAction('player.repeat', { on: state.repeat });
     });
 
     document.getElementById('volume').addEventListener('input', (e) => {
-      setVolume(Number(e.target.value));
+      const v = Number(e.target.value);
+      setVolume(v);
+      logAction('player.volume', { value: v }, 'vol');
     });
 
     document.getElementById('rate').addEventListener('input', (e) => {
       const r = Number(e.target.value);
       state.audioA.playbackRate = r;
       state.audioB.playbackRate = r;
+      logAction('player.rate', { value: r }, 'rate');
     });
 
     const pitchBtn = document.getElementById('pitch-lock');
@@ -490,6 +518,7 @@ ${item.name}`);
         const on = !pitchBtn.classList.contains('primary');
         setPitchLock(on);
         pitchBtn.classList.toggle('primary', on);
+        logAction('player.pitchLock', { on });
       });
       // default ON
       setPitchLock(true);
@@ -497,12 +526,15 @@ ${item.name}`);
     }
 
     document.getElementById('rescan').addEventListener('click', async () => {
+      logAction('library.rescan');
       await loadLibrary(true);
       notify('Library refreshed', 'success', 2500);
     });
 
     document.getElementById('search').addEventListener('input', (e) => {
-      filterLibrary(e.target.value);
+      const q = e.target.value;
+      logAction('library.search', { q }, 'search', 300);
+      filterLibrary(q);
     });
 
     const importBtn = document.getElementById('import-url-btn');
@@ -510,11 +542,14 @@ ${item.name}`);
       importBtn.addEventListener('click', async () => {
         const url = (document.getElementById('import-url').value || '').trim();
         if (!url) return;
+        logAction('import.url', { url });
         const res = await API.post('api/remote_import.php', { url });
         if (!res.ok) {
           notify(res.error || 'Import failed', 'error');
+          logAction('import.url.error', { error: res.error || 'failed' });
         } else {
           notify('Imported audio from URL', 'success');
+          logAction('import.url.success');
           // Force server-side rescan to update index
           try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
         }
@@ -526,11 +561,14 @@ ${item.name}`);
       importBtnMobile.addEventListener('click', async () => {
         const url = (document.getElementById('import-url-mobile').value || '').trim();
         if (!url) return;
+        logAction('import.url.mobile', { url });
         const res = await API.post('api/remote_import.php', { url });
         if (!res.ok) {
           notify(res.error || 'Import failed', 'error');
+          logAction('import.url.mobile.error', { error: res.error || 'failed' });
         } else {
           notify('Imported audio from URL', 'success');
+          logAction('import.url.mobile.success');
           try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
         }
         await loadLibrary(true);
@@ -540,19 +578,19 @@ ${item.name}`);
     const up = document.getElementById('upload-input');
     up.addEventListener('change', async () => {
       const files = Array.from(up.files || []);
-      try { if (window.BUG) BUG.log('upload.files', files.map(f => ({ name: f.name, size: f.size }))); } catch (_) {}
+      logAction('upload.files', files.map(f => ({ name: f.name, size: f.size })));
       let okCount = 0, errCount = 0;
       for (const f of files) {
         try {
           const res = await API.upload('api/upload.php', f);
-          try { if (window.BUG) BUG.log('upload.result', res); } catch (_) {}
+          logAction('upload.result', res);
           if (res.ok) okCount++;
           else { errCount++; notify(res.error || `Upload failed: ${f.name}`, 'error'); }
         } catch (err) {
           console.error('Upload failed', err);
           errCount++;
           notify(`Upload failed: ${f.name}`, 'error');
-          try { if (window.BUG) BUG.error('upload.error', err); } catch (_) {}
+          logAction('upload.error', { message: err.message });
         }
       }
       // Force server-side rescan to update index
@@ -563,34 +601,25 @@ ${item.name}`);
       if (errCount > 0) notify(`${errCount} upload(s) failed`, 'error');
       up.value = '';
     });
-    const upMobile = document.getElementById('upload-input-mobile');
-    if (upMobile) {
-      upMobile.addEventListener('change', async () => {
-        const files = Array.from(upMobile.files || []);
-        for (const f of files) {
-          const res = await API.upload('api/upload.php', f);
-          if (!res.ok) alert(res.error || 'Upload failed');
-        }
-        await loadLibrary(true);
-        upMobile.value = '';
-      });
-    }
 
     document.getElementById('viz-style').addEventListener('change', (e) => {
       if (state.viz) state.viz.setStyle(e.target.value);
+      logAction('viz.style', { style: e.target.value });
     });
     document.getElementById('viz-color-1').addEventListener('change', (e) => {
       if (state.viz) state.viz.setColors(e.target.value, document.getElementById('viz-color-2').value);
+      logAction('viz.color1', { color: e.target.value });
     });
     document.getElementById('viz-color-2').addEventListener('change', (e) => {
       if (state.viz) state.viz.setColors(document.getElementById('viz-color-1').value, e.target.value);
+      logAction('viz.color2', { color: e.target.value });
     });
     const glow = document.getElementById('viz-glow');
     const trail = document.getElementById('viz-trail');
     const art = document.getElementById('viz-art');
-    if (glow) glow.addEventListener('change', () => { if (state.viz) state.viz.setGlow(glow.checked); });
-    if (trail) trail.addEventListener('change', () => { if (state.viz) state.viz.setTrail(trail.checked); });
-    if (art) art.addEventListener('change', () => { if (state.viz) state.viz.setShowArt(art.checked); });
+    if (glow) glow.addEventListener('change', () => { if (state.viz) state.viz.setGlow(glow.checked); logAction('viz.glow', { on: glow.checked }); });
+    if (trail) trail.addEventListener('change', () => { if (state.viz) state.viz.setTrail(trail.checked); logAction('viz.trail', { on: trail.checked }); });
+    if (art) art.addEventListener('change', () => { if (state.viz) state.viz.setShowArt(art.checked); logAction('viz.art', { on: art.checked }); });
 
     // tuning controls
     const rot = document.getElementById('viz-rot');
@@ -602,31 +631,35 @@ ${item.name}`);
     const ss = document.getElementById('viz-spike-scale');
     const ws = document.getElementById('viz-wave-scale');
 
-    rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); });
-    dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); });
-    th.addEventListener('input', e => { if (state.viz) state.viz.setThickness(Number(e.target.value)); });
-    rf.addEventListener('input', e => { if (state.viz) { const v = Number(e.target.value); state.viz.setRingFloor(v); state.viz.setRadialFloor(v); } });
-    gs.addEventListener('input', e => { if (state.viz) state.viz.setGlowStrength(Number(e.target.value)); });
-    ta.addEventListener('input', e => { if (state.viz) state.viz.setTrailAlpha(Number(e.target.value)); });
-    ss.addEventListener('input', e => { if (state.viz) state.viz.setSpikeScale(Number(e.target.value)); });
-    ws.addEventListener('input', e => { if (state.viz) state.viz.setWaveScale(Number(e.target.value)); });
+    rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); logAction('viz.rot', { value: Number(e.target.value) }, 'viz-rot'); });
+    dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); logAction('viz.decay', { value: Number(e.target.value) }, 'viz-decay'); });
+    th.addEventListener('input', e => { if (state.viz) state.viz.setThickness(Number(e.target.value)); logAction('viz.thickness', { value: Number(e.target.value) }, 'viz-thickness'); });
+    rf.addEventListener('input', e => { if (state.viz) { const v = Number(e.target.value); state.viz.setRingFloor(v); state.viz.setRadialFloor(v); } logAction('viz.floor', { value: Number(e.target.value) }, 'viz-floor'); });
+    gs.addEventListener('input', e => { if (state.viz) state.viz.setGlowStrength(Number(e.target.value)); logAction('viz.glowStrength', { value: Number(e.target.value) }, 'viz-glowStrength'); });
+    ta.addEventListener('input', e => { if (state.viz) state.viz.setTrailAlpha(Number(e.target.value)); logAction('viz.trailAlpha', { value: Number(e.target.value) }, 'viz-trailAlpha'); });
+    ss.addEventListener('input', e => { if (state.viz) state.viz.setSpikeScale(Number(e.target.value)); logAction('viz.spikeScale', { value: Number(e.target.value) }, 'viz-spikeScale'); });
+    ws.addEventListener('input', e => { if (state.viz) state.viz.setWaveScale(Number(e.target.value)); logAction('viz.waveScale', { value: Number(e.target.value) }, 'viz-waveScale'); });
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
-      document.getElementById('eq-panel').classList.toggle('show');
+      const panel = document.getElementById('eq-panel');
+      panel.classList.toggle('show');
+      logAction('eq.toggle', { show: panel.classList.contains('show') });
     });
 
     document.getElementById('eq-preset').addEventListener('change', (e) => {
       state.eq.setPreset(e.target.value);
+      logAction('eq.preset', { preset: e.target.value });
     });
     document.querySelectorAll('#eq-panel input[type="range"]').forEach(sl => {
       sl.addEventListener('input', (e) => {
         const i = Number(e.target.dataset.band);
         const v = Number(e.target.value);
         state.eq.setGain(i, v);
+        logAction('eq.band', { band: i, value: v }, 'eq-band-' + i);
       });
     });
 
-    document.getElementById('record').addEventListener('click', () => toggleRecording());
+    document.getElementById('record').addEventListener('click', () => { logAction('record.toggle'); toggleRecording(); });
 
     // Snapshot
     const snapBtn = document.getElementById('snapshot');
@@ -639,6 +672,7 @@ ${item.name}`);
         a.href = url;
         a.download = 'visualizer.png';
         a.click();
+        logAction('snapshot');
       });
     }
 
@@ -648,6 +682,7 @@ ${item.name}`);
       chooseBtn.addEventListener('click', () => {
         const up = document.getElementById('upload-input');
         if (up) up.click();
+        logAction('chooseAudioFiles');
       });
     }
 
@@ -725,8 +760,10 @@ ${item.name}`);
           if (item) playTrack(item);
         }
         notify('Project loaded', 'success');
+        logAction('project.load', { ok: true });
       } catch (err) {
         notify('Failed to apply project: ' + err.message, 'error');
+        logAction('project.load.error', { message: err.message });
       }
     }
 
@@ -740,10 +777,11 @@ ${item.name}`);
         a.download = 'visualizer-project.json';
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 3000);
+        logAction('project.save');
       });
     }
     if (loadProj && loadInp) {
-      loadProj.addEventListener('click', () => loadInp.click());
+      loadProj.addEventListener('click', () => { logAction('project.load.select'); loadInp.click(); });
       loadInp.addEventListener('change', async () => {
         const f = loadInp.files[0];
         if (!f) return;
@@ -753,6 +791,7 @@ ${item.name}`);
           applyProject(proj);
         } catch (err) {
           notify('Failed to load project: ' + err.message, 'error');
+          logAction('project.load.error', { message: err.message });
         } finally {
           loadInp.value = '';
         }
@@ -769,12 +808,12 @@ ${state.currentTrack.name || state.currentTrack.path}`);
         try {
           const res = await API.post('api/delete.php', { path: state.currentTrack.path });
           if (res.ok) {
-            try { if (window.BUG) BUG.log('deleteTrack', state.currentTrack.path); } catch (_) {}
             // stop playback, clear src/art
             try { state.audioA.pause(); state.audioA.src = ''; } catch (_) {}
             try { state.audioB.pause(); state.audioB.src = ''; } catch (_) {}
             document.getElementById('art').style.backgroundImage = '';
             notify('Track deleted', 'success');
+            logAction('track.delete', { path: state.currentTrack.path });
             state.currentTrack = null;
             document.getElementById('track-title').textContent = '—';
             document.getElementById('track-time').textContent = '0:00 / 0:00';
@@ -782,10 +821,12 @@ ${state.currentTrack.name || state.currentTrack.path}`);
             await loadLibrary(true);
           } else {
             notify(res.error || 'Delete failed', 'error');
+            logAction('track.delete.error', { error: res.error || 'failed' });
           }
         } catch (err) {
           console.error('Delete error', err);
           notify('Delete failed: ' + err.message, 'error');
+          logAction('track.delete.error', { message: err.message });
         }
       });
     }
@@ -806,6 +847,7 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       state.recorder = null;
       document.getElementById('record').textContent = 'Record';
       notify('Recording saved (WebM downloaded)', 'success', 2500);
+      logAction('record.stop');
       return;
     }
     const canvas = document.getElementById('viz');
@@ -831,6 +873,7 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     state.recorder = rec;
     document.getElementById('record').textContent = 'Stop';
     notify('Recording started', 'info', 1800);
+    logAction('record.start');
   }
 
   function arrayBufferToBase64(buffer) {
