@@ -21,6 +21,11 @@ const App = (() => {
     shuffle: false,
     repeat: false,
     timerInterval: null,
+    // active/inactive references for reliable play/pause control
+    activeAudio: null,
+    inactiveAudio: null,
+    activeGain: null,
+    inactiveGain: null,
     };
 
   async function init() {
@@ -41,6 +46,7 @@ const App = (() => {
 
   function ensureAudioContext() {
     if (state.ctx) return;
+    try { if (window.BUG) BUG.log('ensureAudioContext'); } catch (_) {}
 
     state.ctx = new (window.AudioContext || window.webkitAudioContext)();
     state.master = state.ctx.createGain();
@@ -135,9 +141,22 @@ const App = (() => {
 
     state.audioA.addEventListener('ended', onEnded);
     state.audioB.addEventListener('ended', onEnded);
+
+    // super logging of audio element events
+    const logAudioEvents = (label, el) => {
+      const events = ['error','stalled','abort','emptied','waiting','canplay','canplaythrough','pause','play','playing','loadedmetadata','loadeddata','timeupdate','ended'];
+      events.forEach(ev => {
+        el.addEventListener(ev, (e) => {
+          try { if (window.BUG) BUG.log(`audio:${label}:${ev}`, { currentTime: el.currentTime, src: el.src }); } catch (_) {}
+        });
+      });
+    };
+    logAudioEvents('A', state.audioA);
+    logAudioEvents('B', state.audioB);
   }
 
   async function loadLibrary(rescan = false) {
+    try { if (window.BUG) BUG.log('loadLibrary', { rescan }); } catch (_) {}
     try {
       const params = { page: 0, size: 500 };
       if (rescan) params.rescan = 1;
@@ -145,6 +164,7 @@ const App = (() => {
       state.library = data.items || [];
     } catch (err) {
       console.warn('Library load failed:', err);
+      try { if (window.BUG) BUG.error('loadLibrary', err); } catch (_) {}
       state.library = [];
     }
     renderLibrary();
@@ -156,11 +176,20 @@ const App = (() => {
     const src = Array.isArray(list) ? list : state.library;
     src.forEach((item, idx) => {
       const li = document.createElement('li');
-      li.textContent = item.name;
-      li.addEventListener('click', () => playIndex(idx));
-      ul.appendChild(li);
-    });
-  }
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = item.name;
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Delete';
+      delBtn.className = 'btn danger';
+      delBtn.title = 'Delete this track';
+      delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const ok = window.confirm(`Delete track?\n${item.name}`);
+        if (!ok) return;
+        try {
+          const res =  }
 
   function filterLibrary(query) {
     const q = (query || '').toLowerCase();
@@ -170,6 +199,7 @@ const App = (() => {
   }
 
   function playIndex(i) {
+    try { if (window.BUG) BUG.log('playIndex', i); } catch (_) {}
     if (i < 0 || i >= state.library.length) return;
     const track = state.library[i];
     state.currentIndex = i;
@@ -178,6 +208,7 @@ const App = (() => {
 
   function playTrack(track) {
     ensureAudioContext();
+    try { if (window.BUG) BUG.log('playTrack', track); } catch (_) {}
 
     const src = 'assets/music/' + encodeURI(track.path);
 
@@ -194,11 +225,13 @@ const App = (() => {
 
     if (!incoming || !outgoing) return;
 
+    // stop outgoing to avoid play() interrupted by pause()
+    try { outgoing.pause(); } catch (_) {}
     incoming.pause();
     incoming.src = src;
     incoming.currentTime = 0;
     incoming.playbackRate = Number(document.getElementById('rate').value || 1);
-    incoming.volume = 1.0;
+    incoming.volume = Number(document.getElementById('volume').value || 0.9);
 
     // Art via jsmediatags if possible
     try {
@@ -230,9 +263,18 @@ const App = (() => {
 
     incoming.play().then(() => {
       if (state.ctx) crossfade(incomingGain, outgoingGain, state.crossfade);
+      // mark active/inactive for reliable toggling
+      state.activeAudio = incoming;
+      state.inactiveAudio = outgoing;
+      state.activeGain = incomingGain;
+      state.inactiveGain = outgoingGain;
+      // flip for next track selection
       state.useA = !state.useA;
       document.getElementById('play').textContent = 'Pause';
-    }).catch(err => console.error('Playback error', err));
+    }).catch(err => {
+      console.error('Playback error', err);
+      try { if (window.BUG) BUG.error('playTrack.play', err); } catch (_) {}
+    });
   }
 
   // Advanced time-stretch mode removed due to module compatibility issues with CDN builds.
@@ -264,6 +306,7 @@ const App = (() => {
   }
 
   function onEnded() {
+    try { if (window.BUG) BUG.log('onEnded', { idx: state.currentIndex, repeat: state.repeat, shuffle: state.shuffle }); } catch (_) {}
     if (state.repeat) {
       playIndex(state.currentIndex);
       return;
@@ -279,6 +322,7 @@ const App = (() => {
   function bindUI() {
     document.getElementById('play').addEventListener('click', async () => {
       ensureAudioContext();
+      try { if (window.BUG) BUG.log('playButton'); } catch (_) {}
       // Ensure AudioContext resumed per user gesture
       try { if (state.ctx && state.ctx.state === 'suspended') await state.ctx.resume(); } catch (_) {}
 
@@ -288,14 +332,23 @@ const App = (() => {
         return;
       }
 
-      const active = state.useA ? state.audioB : state.audioA;
+      const active = state.activeAudio || (state.useA ? state.audioB : state.audioA);
       if (!active) return;
       if (active.paused) {
-        active.play();
-        document.getElementById('play').textContent = 'Pause';
+        active.play().then(() => {
+          document.getElementById('play').textContent = 'Pause';
+        }).catch(err => {
+          console.error('Play toggle error', err);
+          try { if (window.BUG) BUG.error('playButton.play', err); } catch (_) {}
+        });
       } else {
-        active.pause();
-        document.getElementById('play').textContent = 'Play';
+        try {
+          active.pause();
+          document.getElementById('play').textContent = 'Play';
+        } catch (err) {
+          console.error('Pause toggle error', err);
+          try { if (window.BUG) BUG.error('playButton.pause', err); } catch (_) {}
+        }
       }
     });
 
@@ -450,12 +503,43 @@ const App = (() => {
     });
 
     document.getElementById('record').addEventListener('click', () => toggleRecording());
+
+    const delBtn = document.getElementById('delete-track');
+    if (delBtn) {
+      delBtn.addEventListener('click', async () => {
+        if (!state.currentTrack || !state.currentTrack.path) return;
+        const ok = window.confirm(`Delete current track?\n${state.currentTrack.name || state.currentTrack.path}`);
+        if (!ok) return;
+        try {
+          const res = await API.post('api/delete.php', { path: state.currentTrack.path });
+          if (res.ok) {
+            try { if (window.BUG) BUG.log('deleteTrack', state.currentTrack.path); } catch (_) {}
+            // stop playback, clear src/art
+            try { state.audioA.pause(); state.audioA.src = ''; } catch (_) {}
+            try { state.audioB.pause(); state.audioB.src = ''; } catch (_) {}
+            document.getElementById('art').style.backgroundImage = '';
+            state.currentTrack = null;
+            document.getElementById('track-title').textContent = '—';
+            document.getElementById('track-time').textContent = '0:00 / 0:00';
+            document.getElementById('play').textContent = 'Play';
+            await loadLibrary(true);
+          } else {
+            alert(res.error || 'Delete failed');
+          }
+        } catch (err) {
+          console.error('Delete error', err);
+          alert('Delete failed: ' + err.message);
+        }
+      });
+    }
   }
 
   function setVolume(v) {
     // control via element volume plus master gain
-    const active = state.useA ? state.audioB : state.audioA;
-    active.volume = v;
+    const active = state.activeAudio || (state.useA ? state.audioB : state.audioA);
+    if (active) active.volume = v;
+    if (state.audioA) state.audioA.volume = v;
+    if (state.audioB) state.audioB.volume = v;
     state.master && (state.master.gain.value = v);
   }
 

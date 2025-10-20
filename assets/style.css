@@ -226,6 +226,13 @@ canvas#viz {
   background: #2e7be7;
   color: #fff;
 }
+.btn.danger {
+  background: #fbe9e9;
+  color: #7a1d1d;
+}
+.btn.danger:hover {
+  background: #f5d7d7;
+}
 
 /* Sliders */
 .slider-group {

@@ -143,7 +143,12 @@ class Visualizer {
     this.running = true;
     const loop = () => {
       if (!this.running) return;
-      this.draw();
+      try {
+        this.draw();
+      } catch (err) {
+        console.error('viz.draw error', err);
+        try { if (window.BUG) BUG.error('viz.draw', err); } catch (_) {}
+      }
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
