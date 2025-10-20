@@ -13,8 +13,8 @@ body {
   height: 100vh;
   font-family: system-ui, sans-serif;
   margin: 0;
-  background: linear-gradient(120deg, #f8fafc 70%, #e7eaf2 100%);
-  color: #222;
+  background: #000; /* dark site background */
+  color: #e6e6e9;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -190,6 +190,23 @@ footer {
   padding: 1rem;
   display: flex;
   flex-direction: column;
+}
+
+/* Visualizer layout card wraps canvas + controls + tuning + EQ + logger */
+.viz-layout {
+  background: #0f1322;
+  border: 1px solid #1c2236;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+.viz-layout .eq-header span,
+.viz-layout label {
+  color: #c9d7ff;
+}
+.viz-layout .eq-panel {
+  background: #101528;
+  border-color: #1c2236;
 }
 
 .art-and-info {

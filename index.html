@@ -50,100 +50,108 @@
           </div>
         </div>
 
-        <canvas id="viz" width="960" height="300"></canvas>
+        <!-- Visualizer layout wraps canvas + controls + tuning + EQ + logger -->
+        <div class="viz-layout">
 
-        <div class="controls">
-          <button id="prev" class="btn">Prev</button>
-          <button id="play" class="btn primary">Play</button>
-          <button id="next" class="btn">Next</button>
-          <button id="shuffle" class="btn" title="Shuffle">Shuffle</button>
-          <button id="repeat" class="btn" title="Repeat">Repeat</button>
+          <canvas id="viz" width="960" height="300"></canvas>
 
-          <div class="slider-group">
-            <label>Volume</label>
-            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.9"/>
+          <div class="controls">
+            <button id="prev" class="btn">Prev</button>
+            <button id="play" class="btn primary">Play</button>
+            <button id="next" class="btn">Next</button>
+            <button id="shuffle" class="btn" title="Shuffle">Shuffle</button>
+            <button id="repeat" class="btn" title="Repeat">Repeat</button>
+
+            <div class="slider-group">
+              <label>Volume</label>
+              <input type="range" id="volume" min="0" max="1" step="0.01" value="0.9"/>
+            </div>
+
+            <div class="slider-group">
+              <label>Speed</label>
+              <input type="range" id="rate" min="0.5" max="2" step="0.01" value="1"/>
+            </div>
+
+            <button id="pitch-lock" class="btn" title="Preserve pitch when changing speed">Pitch Lock</button>
+
+            <button id="delete-track" class="btn danger" title="Delete current track">Delete Track</button>
+            <button id="record" class="btn" title="Record visualizer">Record</button>
           </div>
 
-          <div class="slider-group">
-            <label>Speed</label>
-            <input type="range" id="rate" min="0.5" max="2" step="0.01" value="1"/>
+          <div class="customize">
+            <div class="viz-style">
+              <label>Visualizer</label>
+              <select id="viz-style">
+                <option value="bars">Bars</option>
+                <option value="wave">Wave</option>
+                <option value="mirror">Mirror Bars</option>
+                <option value="ring">Ring Wave</option>
+                <option value="radial">Radial Bars</option>
+                <option value="particles">Particles</option>
+                <option value="circle">Circle</option>
+              </select>
+            </div>
+            <div class="viz-colors">
+              <label>Colors</label>
+              <input type="color" id="viz-color-1" value="#19d3ae"/>
+              <input type="color" id="viz-color-2" value="#1e90ff"/>
+            </div>
+            <div class="viz-options">
+              <label><input type="checkbox" id="viz-glow" checked/> Glow</label>
+              <label><input type="checkbox" id="viz-trail" checked/> Trail</label>
+              <label><input type="checkbox" id="viz-art" checked/> Center Art</label>
+            </div>
+            <div class="viz-tuning">
+              <label>Rotation <input type="range" id="viz-rot" min="0" max="3" step="0.01" value="0.6"></label>
+              <label>Decay <input type="range" id="viz-decay" min="0.7" max="0.99" step="0.001" value="0.92"></label>
+              <label>Thickness <input type="range" id="viz-thickness" min="0.5" max="3" step="0.01" value="1"></label>
+              <label>Ring Fill <input type="range" id="viz-ring-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
+              <label>Glow Strength <input type="range" id="viz-glow-strength" min="0" max="24" step="1" value="12"></label>
+              <label>Trail Alpha <input type="range" id="viz-trail-alpha" min="0" max="0.3" step="0.01" value="0.08"></label>
+              <label>Spike Scale <input type="range" id="viz-spike-scale" min="0.5" max="2" step="0.01" value="1"></label>
+              <label>Wave Scale <input type="range" id="viz-wave-scale" min="0.5" max="2" step="0.01" value="1"></label>
+            </div>
+            <div class="presets">
+              <input type="text" id="preset-name" placeholder="Preset name"/>
+              <button id="save-viz-preset" class="btn">Save Viz Preset</button>
+              <button id="save-eq-preset" class="btn">Save EQ Preset</button>
+              <select id="preset-list"></select>
+              <button id="apply-preset" class="btn">Apply Preset</button>
+              <button id="delete-preset" class="btn">Delete Preset</button>
+            </div>
           </div>
 
-          <button id="pitch-lock" class="btn" title="Preserve pitch when changing speed">Pitch Lock</button>
-
-          <button id="delete-track" class="btn danger" title="Delete current track">Delete Track</button>
-          <button id="record" class="btn" title="Record visualizer">Record</button>
-        </div>
-
-        <div class="customize">
-          <div class="viz-style">
-            <label>Visualizer</label>
-            <select id="viz-style">
-              <option value="bars">Bars</option>
-              <option value="wave">Wave</option>
-              <option value="mirror">Mirror Bars</option>
-              <option value="ring">Ring Wave</option>
-              <option value="radial">Radial Bars</option>
-              <option value="particles">Particles</option>
-              <option value="circle">Circle</option>
+          <div class="eq-header">
+            <span>Equalizer</span>
+            <select id="eq-preset">
+              <option value="flat">Flat</option>
+              <option value="pop">Pop</option>
+              <option value="rock">Rock</option>
+              <option value="jazz">Jazz</option>
+              <option value="bass">Bass Boost</option>
+              <option value="treble">Treble Boost</option>
             </select>
+            <button id="eq-toggle" class="btn">Show/Hide</button>
           </div>
-          <div class="viz-colors">
-            <label>Colors</label>
-            <input type="color" id="viz-color-1" value="#19d3ae"/>
-            <input type="color" id="viz-color-2" value="#1e90ff"/>
-          </div>
-          <div class="viz-options">
-            <label><input type="checkbox" id="viz-glow" checked/> Glow</label>
-            <label><input type="checkbox" id="viz-trail" checked/> Trail</label>
-            <label><input type="checkbox" id="viz-art" checked/> Center Art</label>
-          </div>
-          <div class="viz-tuning">
-            <label>Rotation <input type="range" id="viz-rot" min="0" max="3" step="0.01" value="0.6"></label>
-            <label>Decay <input type="range" id="viz-decay" min="0.7" max="0.99" step="0.001" value="0.92"></label>
-            <label>Thickness <input type="range" id="viz-thickness" min="0.5" max="3" step="0.01" value="1"></label>
-            <label>Ring Fill <input type="range" id="viz-ring-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
-            <label>Glow Strength <input type="range" id="viz-glow-strength" min="0" max="24" step="1" value="12"></label>
-            <label>Trail Alpha <input type="range" id="viz-trail-alpha" min="0" max="0.3" step="0.01" value="0.08"></label>
-            <label>Spike Scale <input type="range" id="viz-spike-scale" min="0.5" max="2" step="0.01" value="1"></label>
-            <label>Wave Scale <input type="range" id="viz-wave-scale" min="0.5" max="2" step="0.01" value="1"></label>
-          </div>
-          <div class="presets">
-            <input type="text" id="preset-name" placeholder="Preset name"/>
-            <button id="save-viz-preset" class="btn">Save Viz Preset</button>
-            <button id="save-eq-preset" class="btn">Save EQ Preset</button>
-            <select id="preset-list"></select>
-            <button id="apply-preset" class="btn">Apply Preset</button>
-            <button id="delete-preset" class="btn">Delete Preset</button>
-          </div>
-        </div>
 
-        <div class="eq-header">
-          <span>Equalizer</span>
-          <select id="eq-preset">
-            <option value="flat">Flat</option>
-            <option value="pop">Pop</option>
-            <option value="rock">Rock</option>
-            <option value="jazz">Jazz</option>
-            <option value="bass">Bass Boost</option>
-            <option value="treble">Treble Boost</option>
-          </select>
-          <button id="eq-toggle" class="btn">Show/Hide</button>
-        </div>
-
-        <div id="eq-panel" class="eq-panel">
-          <div class="bands">
-            <div class="band"><label>31</label><input type="range" data-band="0" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>62</label><input type="range" data-band="1" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>125</label><input type="range" data-band="2" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>250</label><input type="range" data-band="3" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>500</label><input type="range" data-band="4" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>1k</label><input type="range" data-band="5" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>2k</label><input type="range" data-band="6" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>4k</label><input type="range" data-band="7" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>8k</label><input type="range" data-band="8" min="-12" max="12" step="0.5" value="0"/></div>
-            <div class="band"><label>16k</label><input type="range" data-band="9" min="-12" max="12" step="0.5" value="0"/></div>
+          <div id="eq-panel" class="eq-panel">
+            <div class="bands">
+              <div class="band"><label>31</label><input type="range" data-band="0" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>62</label><input type="range" data-band="1" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>125</label><input type="range" data-band="2" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>250</label><input type="range" data-band="3" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>500</label><input type="range" data-band="4" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>1k</label><input type="range" data-band="5" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>2k</label><input type="range" data-band="6" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>4k</label><input type="range" data-band="7" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>8k</label><input type="range" data-band="8" min="-12" max="12" step="0.5" value="0"/></div>
+              <div class="band"><label>16k</label><input type="range" data-band="9" min="-12" max="12" step="0.5" value="0"/></div>
+            </div>
           </div>
+
+          <!-- Logger docked inside visualizer layout -->
+          <div id="logger-anchor"></div>
+
         </div>
       </section>
 
@@ -180,7 +188,7 @@
     <p>&copy; 2025 Avee-like Player (PHP)</p>
   </footer>
 
-  <div id="logger-anchor" style="max-width:1200px;margin:0 auto 0.8rem auto;"></div>
+  
 
   <script src="assets/js/utils.js?v=20251020-10"></script>
   <script src="assets/js/equalizer.js?v=20251020-10"></script>
