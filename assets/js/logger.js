@@ -32,19 +32,40 @@
   function createPanel() {
     panel = document.createElement('div');
     panel.id = 'debug-panel';
-    panel.style.position = 'fixed';
-    panel.style.left = '0';
-    panel.style.right = '0';
-    panel.style.bottom = '0';
-    panel.style.maxHeight = '30vh';
-    panel.style.background = 'rgba(16,16,24,0.9)';
-    panel.style.color = '#e6e6e9';
-    panel.style.fontFamily = 'monospace';
-    panel.style.fontSize = '12px';
-    panel.style.borderTop = '1px solid #333';
-    panel.style.zIndex = '99999';
-    panel.style.display = 'flex';
-    panel.style.flexDirection = 'column';
+
+    // If a logger anchor exists in the page, render as a normal block there (not floating).
+    const anchor = document.getElementById('logger-anchor');
+    const isDocked = !!anchor;
+
+    if (isDocked) {
+      panel.style.position = 'static';
+      panel.style.width = '100%';
+      panel.style.maxHeight = '30vh';
+      panel.style.background = 'rgba(16,16,24,0.9)';
+      panel.style.color = '#e6e6e9';
+      panel.style.fontFamily = 'monospace';
+      panel.style.fontSize = '12px';
+      panel.style.borderTop = '1px solid #333';
+      panel.style.display = 'flex';
+      panel.style.flexDirection = 'column';
+      panel.style.marginTop = '10px';
+      panel.style.marginBottom = '10px';
+    } else {
+      // Fallback to floating panel fixed at the bottom if no anchor is present.
+      panel.style.position = 'fixed';
+      panel.style.left = '0';
+      panel.style.right = '0';
+      panel.style.bottom = '0';
+      panel.style.maxHeight = '30vh';
+      panel.style.background = 'rgba(16,16,24,0.9)';
+      panel.style.color = '#e6e6e9';
+      panel.style.fontFamily = 'monospace';
+      panel.style.fontSize = '12px';
+      panel.style.borderTop = '1px solid #333';
+      panel.style.zIndex = '99999';
+      panel.style.display = 'flex';
+      panel.style.flexDirection = 'column';
+    }
 
     controls = document.createElement('div');
     controls.style.display = 'flex';
@@ -120,9 +141,9 @@
 
     panel.appendChild(controls);
     panel.appendChild(pre);
-    document.body.appendChild(panel);
-  }
-
+    const anchor = document.getElementById('logger-anchor');
+    if (anchor) anchor.appendChild(panel);
+    else document.body.appendChild
   function init() {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', createPanel);

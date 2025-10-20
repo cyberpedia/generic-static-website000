@@ -373,12 +373,18 @@
 
       // trail effect for select styles; circle keeps a crisp ring
       const trailStyles = new Set(['radial', 'ring', 'particles', 'bars', 'mirror', 'wave']);
-      if (this.trail && trailStyles.has(this.style)) {
-        ctx.fillStyle = `rgba(15,19,34,${this.trailAlpha})`;
-        ctx.fillRect(0, 0, w, h);
-      } else {
-        ctx.clearRect(0, 0, w, h);
-      }
+      // advance rotation angle once per frame for all styles
+    const now = performance.now();
+    const dt = this.lastTS ? (now - this.lastTS) / 1000 : 0;
+    this.lastTS = now;
+    this.angle += this.rotation * dt;
+
+    if (this.trail && trailStyles.has(this.style)) {
+      ctx.fillStyle = `rgba(15,19,34,${this.trailAlpha})`;
+      ctx.fillRect(0, 0, w, h);
+    } else {
+      ctx.clearRect(0, 0, w, h);
+    }
 
       // center art (draw under visualization)
       this.drawCenterArt(w, h);
@@ -431,11 +437,7 @@
     }
 
     drawRingWave(w, h) {
-      // smoothed time-domain ring wave
-      const now = performance.now();
-      const dt = this.lastTS ? (now - this.lastTS) / 1000 : 0;
-      this.lastTS = now;
-      this.angle += this.rotation * dt;
+      // smoothed time-domain ring wave (rotation advanced in draw())
 
       const bins = 240;
       const wave = this.getTimeWave(bins);
@@ -489,7 +491,7 @@
 
     drawRadialBars(w, h) {
       // frequency-domain radial bars with rotation and peak decay (stereo mirrored if available)
-      const now = performance.now();
+    // rotation advanced in dr_code;
       const dt = this.lastTS ? (now - this.lastTS) / 1000 : 0;
       this.lastTS = now;
       this.angle += this.rotation * dt;
@@ -609,48 +611,48 @@
       const binsHalf = 90;
       const spikeScale = Math.min(h / 4, r * 0.65) * this.spikeScale;
 
-      // stereo or mono
-      let levelsL, levelsR;
-      if (this.analyserL && this.analyserR) {
-        const stereo = this.getStereoSpectrum(binsHalf, 1.0, this.ringFloor);
-        levelsL = stereo.levelsL;
-        levelsR = stereo.levelsR;
-      } else {
-        const mono = this.getSpectrum(binsHalf * 2, 1.0, this.ringFloor);
-        levelsL = mono.levels.slice(0, binsHalf);
-        levelsR = mono.levels.slice(binsHalf);
-      }
+      // stereo or mono peaks (use decay so the Decay slider affects circle)
+    let peaksL, peaksR;
+    if (this.analyserL && this.analyserR) {
+      const stereo = this.getStereoSpectrum(binsHalf, 1.0, this.ringFloor);
+      peaksL = stereo.peaksL;
+      peaksR = stereo.peaksR;
+    } else {
+      const mono = this.getSpectrum(binsHalf * 2, 1.0, this.ringFloor);
+      peaksL = mono.peaks.slice(0, binsHalf);
+      peaksR = mono.peaks.slice(binsHalf);
+    }
 
-      // amplitude spikes around full circle: left on [0..pi], right on [pi..2pi]
-      for (let i = 0; i < binsHalf; i++) {
-        const vL = levelsL[i];
-        const angL = (i / (binsHalf * 2)) * Math.PI * 2 + this.angle * 0.20;
-        const lenL = r + Math.pow(vL, 1.10) * spikeScale;
-        const x0L = cx + Math.cos(angL) * r;
-        const y0L = cy + Math.sin(angL) * r;
-        const x1L = cx + Math.cos(angL) * lenL;
-        const y1L = cy + Math.sin(angL) * lenL;
+    // amplitude spikes around full circle: left on [0..pi], right on [pi..2pi]
+    for (let i = 0; i < binsHalf; i++) {
+      const pvL = peaksL[i];
+      const angL = (i / (binsHalf * 2)) * Math.PI * 2 + this.angle;
+      const lenL = r + Math.pow(pvL, 1.10) * spikeScale;
+      const x0L = cx + Math.cos(angL) * r;
+      const y0L = cy + Math.sin(angL) * r;
+      const x1L = cx + Math.cos(angL) * lenL;
+      const y1L = cy + Math.sin(angL) * lenL;
 
-        this.ctx.beginPath();
-        this.ctx.moveTo(x0L, y0L);
-        this.ctx.lineTo(x1L, y1L);
-        this.ctx.lineWidth = (1.8 + vL * 2.0) * this.thickness;
-        this.ctx.stroke();
+      this.ctx.beginPath();
+      this.ctx.moveTo(x0L, y0L);
+      this.ctx.lineTo(x1L, y1L);
+      this.ctx.lineWidth = (1.8 + pvL * 2.0) * this.thickness;
+      this.ctx.stroke();
 
-        const vR = levelsR[i];
-        const angR = ((i + binsHalf) / (binsHalf * 2)) * Math.PI * 2 + this.angle * 0.20;
-        const lenR = r + Math.pow(vR, 1.10) * spikeScale;
-        const x0R = cx + Math.cos(angR) * r;
-        const y0R = cy + Math.sin(angR) * r;
-        const x1R = cx + Math.cos(angR) * lenR;
-        const y1R = cy + Math.sin(angR) * lenR;
+      const pvR = peaksR[i];
+      const angR = ((i + binsHalf) / (binsHalf * 2)) * Math.PI * 2 + this.angle;
+      const lenR = r + Math.pow(pvR, 1.10) * spikeScale;
+      const x0R = cx + Math.cos(angR) * r;
+      const y0R = cy + Math.sin(angR) * r;
+      const x1R = cx + Math.cos(angR) * lenR;
+      const y1R = cy + Math.sin(angR) * lenR;
 
-        this.ctx.beginPath();
-        this.ctx.moveTo(x0R, y0R);
-        this.ctx.lineTo(x1R, y1R);
-        this.ctx.lineWidth = (1.8 + vR * 2.0) * this.thickness;
-        this.ctx.stroke();
-      }
+      this.ctx.beginPath();
+      this.ctx.moveTo(x0R, y0R);
+      this.ctx.lineTo(x1R, y1R);
+      this.ctx.lineWidth = (1.8 + pvR * 2.0) * this.thickness;
+      this.ctx.stroke();
+    }
 
       // progress arc overlay (12 o'clock start, clockwise)
       if (this.progress > 0) {
