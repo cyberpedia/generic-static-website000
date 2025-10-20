@@ -482,4 +482,13 @@ canvas#viz {
     grid-template-columns: 1fr;
     gap: 0.6rem;
   }
+  .customize .viz-tuning {
+    grid-template-columns: 1fr; /* single column for sliders */
+  }
+  .controls {
+    grid-template-columns: repeat(2, auto);
+  }
+  .slider-group {
+    grid-column: span 2;
+  }
 }
