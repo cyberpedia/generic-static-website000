@@ -4,6 +4,11 @@ html, body {
   padding: 0;
 }
 
+/* Fluid root font-size: scales with viewport width between 14px and 16px */
+html {
+  font-size: clamp(14px, 1.6vw, 16px);
+}
+
 body {
   height: 100vh;
   font-family: system-ui, sans-serif;
