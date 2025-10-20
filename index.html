@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Avee-like Media Player (PHP/XAMPP)</title>
-  <link rel="stylesheet" href="assets/style.css?v=20251020-14">
+  <link rel="stylesheet" href="assets/style.css?v=20251020-15">
   <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
 <body>
@@ -102,6 +102,9 @@
               <label><input type="checkbox" id="viz-glow" checked/> Glow</label>
               <label><input type="checkbox" id="viz-trail" checked/> Trail</label>
               <label><input type="checkbox" id="viz-art" checked/> Center Art</label>
+              <label><input type="checkbox" id="viz-style-presets" /> Style Presets</label>
+              <label><input type="checkbox" id="viz-bpm" /> Show BPM</label>
+              <label><input type="checkbox" id="viz-perf" /> Performance Mode</label>
             </div>
 
             <div class="viz-mode">
@@ -135,6 +138,16 @@
               <label>Beat Boost <input type="range" id="viz-beat-boost" min="0" max="2" step="0.05" value="1"></label>
               <label>Beat Threshold <input type="range" id="viz-beat-thresh" min="0" max="0.6" step="0.01" value="0.08"></label>
               <label>Beat Decay <input type="range" id="viz-beat-decay" min="0.7" max="0.99" step="0.001" value="0.90"></label>
+              <label>Beat Source
+                <select id="viz-beat-src">
+                  <option value="avg" selected>Average</option>
+                  <option value="low">Low</option>
+                  <option value="mid">Mid</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label>Beat Hold (ms) <input type="range" id="viz-beat-hold" min="0" max="500" step="10" value="120"></label>
+              <label>Pulse Width <input type="range" id="viz-pulse-w" min="0" max="2" step="0.05" value="1"></label>
               <label>Low Emphasis <input type="range" id="viz-low-gain" min="0" max="2" step="0.05" value="1"></label>
               <label>Mid Emphasis <input type="range" id="viz-mid-gain" min="0" max="2" step="0.05" value="1"></label>
               <label>High Emphasis <input type="range" id="viz-high-gain" min="0" max="2" step="0.05" value="1"></label>
@@ -266,15 +279,15 @@
 
   
 
-  <script src="assets/js/utils.js?v=20251020-14"></script>
-  <script src="assets/js/equalizer.js?v=20251020-14"></script>
-  <script src="assets/js/visualizer.js?v=20251020-14"></script>
-  <script src="assets/js/playlists.js?v=20251020-14"></script>
-  <script src="assets/js/settings.js?v=20251020-14"></script>
-  <script src="assets/js/cloud.js?v=20251020-14"></script>
-  <script src="assets/js/logger.js?v=20251020-14"></script>
-  <script src="assets/js/toast.js?v=20251020-14"></script>
-  <script src="assets/script.js?v=20251020-14"></script>
-  <script src="assets/js/app.js?v=20251020-14"></script>
+  <script src="assets/js/utils.js?v=20251020-15"></script>
+  <script src="assets/js/equalizer.js?v=20251020-15"></script>
+  <script src="assets/js/visualizer.js?v=20251020-15"></script>
+  <script src="assets/js/playlists.js?v=20251020-15"></script>
+  <script src="assets/js/settings.js?v=20251020-15"></script>
+  <script src="assets/js/cloud.js?v=20251020-15"></script>
+  <script src="assets/js/logger.js?v=20251020-15"></script>
+  <script src="assets/js/toast.js?v=20251020-15"></script>
+  <script src="assets/script.js?v=20251020-15"></script>
+  <script src="assets/js/app.js?v=20251020-15"></script>
 </body>
 </html>

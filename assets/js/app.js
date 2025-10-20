@@ -127,6 +127,11 @@ const App = (() => {
       if (typeof state.viz.setBeatBoost === 'function') state.viz.setBeatBoost(Number(document.getElementById('viz-beat-boost').value || 1));
       if (typeof state.viz.setBeatThreshold === 'function') state.viz.setBeatThreshold(Number(document.getElementById('viz-beat-thresh').value || 0.08));
       if (typeof state.viz.setBeatDecay === 'function') state.viz.setBeatDecay(Number(document.getElementById('viz-beat-decay').value || 0.90));
+      if (typeof state.viz.setBeatSource === 'function') state.viz.setBeatSource((document.getElementById('viz-beat-src')?.value) || 'avg');
+      if (typeof state.viz.setBeatHoldMs === 'function') state.viz.setBeatHoldMs(Number(document.getElementById('viz-beat-hold')?.value || 120));
+      if (typeof state.viz.setPulseWidth === 'function') state.viz.setPulseWidth(Number(document.getElementById('viz-pulse-w')?.value || 1));
+      if (typeof state.viz.setBpmEnabled === 'function') state.viz.setBpmEnabled(!!document.getElementById('viz-bpm')?.checked);
+      if (typeof state.viz.setStylePresets === 'function') state.viz.setStylePresets(!!document.getElementById('viz-style-presets')?.checked);
       // emphasis and smoothing
       if (typeof state.viz.setEmphasis === 'function') state.viz.setEmphasis(
         Number(document.getElementById('viz-low-gain').value || 1),
@@ -134,6 +139,19 @@ const App = (() => {
         Number(document.getElementById('viz-high-gain').value || 1)
       );
       if (typeof state.viz.setSmoothing === 'function') state.viz.setSmoothing(Number(document.getElementById('viz-smooth').value || 0.75));
+      if (typeof state.viz.setPerformanceMode === 'function') {
+        const perfOn = !!document.getElementById('viz-perf')?.checked;
+        state.viz.setPerformanceMode(perfOn);
+        // adjust analyser FFT sizes dynamically
+        const fft = perfOn ? 512 : 1024;
+        const smooth = perfOn ? 0.7 : 0.75;
+        state.analyser.fftSize = fft;
+        state.analyserL.fftSize = fft;
+        state.analyserR.fftSize = fft;
+        state.analyser.smoothingTimeConstant = smooth;
+        state.analyserL.smoothingTimeConstant = smooth;
+        state.analyserR.smoothingTimeConstant = smooth;
+      }
     } catch (_) {}
     state.viz.start();
 
@@ -407,7 +425,8 @@ ${item.name}`);
       const track = state.currentTrack ? (state.currentTrack.name || state.currentTrack.path) : 'N/A';
       const layersCount = (document.getElementById('layers-list')?.children?.length) || 0;
       const selected = 'none';
-      const beat = false;
+      const beatLevel = state.viz ? Number(state.viz.beatLevel || 0).toFixed(2) : '0.00';
+      const bpm = state.viz && state.viz.bpmEnabled ? (state.viz.bpm || '—') : '—';
 
       const lines = [
         `AudioContext: ${ctxState}`,
@@ -416,7 +435,8 @@ ${item.name}`);
         `Recording: ${rec}`,
         `Layers: ${layersCount}`,
         `Selected: ${selected}`,
-        `Beat Detected: ${beat}`
+        `Beat Level: ${beatLevel}`,
+        `BPM: ${bpm}`
       ];
       const pre = document.getElementById('status-info');
       if (pre) pre.textContent = lines.join('\n');
@@ -656,6 +676,43 @@ ${item.name}`);
       });
     }
 
+    // options toggles
+    const stylePresets = document.getElementById('viz-style-presets');
+    if (stylePresets) {
+      stylePresets.addEventListener('change', () => {
+        if (state.viz && state.viz.setStylePresets) state.viz.setStylePresets(stylePresets.checked);
+        // also re-apply on current style
+        if (state.viz && stylePresets.checked) state.viz.setStyle(document.getElementById('viz-style').value);
+        logAction('viz.stylePresets', { on: stylePresets.checked });
+      });
+    }
+    const bpmToggle = document.getElementById('viz-bpm');
+    if (bpmToggle) {
+      bpmToggle.addEventListener('change', () => {
+        if (state.viz && state.viz.setBpmEnabled) state.viz.setBpmEnabled(bpmToggle.checked);
+        logAction('viz.bpm', { on: bpmToggle.checked });
+      });
+    }
+    const perfToggle = document.getElementById('viz-perf');
+    if (perfToggle) {
+      perfToggle.addEventListener('change', () => {
+        const on = perfToggle.checked;
+        if (state.viz && state.viz.setPerformanceMode) state.viz.setPerformanceMode(on);
+        // adjust analyser FFT sizes dynamically
+        if (state.analyser) {
+          const fft = on ? 512 : 1024;
+          const smooth = on ? 0.7 : 0.75;
+          state.analyser.fftSize = fft;
+          state.analyserL.fftSize = fft;
+          state.analyserR.fftSize = fft;
+          state.analyser.smoothingTimeConstant = smooth;
+          state.analyserL.smoothingTimeConstant = smooth;
+          state.analyserR.smoothingTimeConstant = smooth;
+        }
+        logAction('viz.performanceMode', { on });
+      });
+    }
+
     // tuning controls
     const rot = document.getElementById('viz-rot');
     const dec = document.getElementById('viz-decay');
@@ -673,6 +730,9 @@ ${item.name}`);
     const mg = document.getElementById('viz-mid-gain');
     const hg = document.getElementById('viz-high-gain');
     const sm = document.getElementById('viz-smooth');
+    const srcSel = document.getElementById('viz-beat-src');
+    const holdMs = document.getElementById('viz-beat-hold');
+    const pulseW = document.getElementById('viz-pulse-w');
 
     rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); logAction('viz.rot', { value: Number(e.target.value) }, 'viz-rot'); });
     dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); logAction('viz.decay', { value: Number(e.target.value) }, 'viz-decay'); });
@@ -686,6 +746,9 @@ ${item.name}`);
     if (bb) bb.addEventListener('input', e => { if (state.viz && state.viz.setBeatBoost) state.viz.setBeatBoost(Number(e.target.value)); logAction('viz.beatBoost', { value: Number(e.target.value) }, 'viz-beatBoost'); });
     if (bt) bt.addEventListener('input', e => { if (state.viz && state.viz.setBeatThreshold) state.viz.setBeatThreshold(Number(e.target.value)); logAction('viz.beatThreshold', { value: Number(e.target.value) }, 'viz-beatThreshold'); });
     if (bd) bd.addEventListener('input', e => { if (state.viz && state.viz.setBeatDecay) state.viz.setBeatDecay(Number(e.target.value)); logAction('viz.beatDecay', { value: Number(e.target.value) }, 'viz-beatDecay'); });
+    if (srcSel) srcSel.addEventListener('change', e => { if (state.viz && state.viz.setBeatSource) state.viz.setBeatSource(e.target.value); logAction('viz.beatSource', { value: e.target.value }); });
+    if (holdMs) holdMs.addEventListener('input', e => { if (state.viz && state.viz.setBeatHoldMs) state.viz.setBeatHoldMs(Number(e.target.value)); logAction('viz.beatHoldMs', { value: Number(e.target.value) }, 'viz-beatHoldMs'); });
+    if (pulseW) pulseW.addEventListener('input', e => { if (state.viz && state.viz.setPulseWidth) state.viz.setPulseWidth(Number(e.target.value)); logAction('viz.pulseWidth', { value: Number(e.target.value) }, 'viz-pulseWidth'); });
     if (lg) lg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisLow', { value: Number(lg.value) }, 'viz-emphasisLow'); });
     if (mg) mg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisMid', { value: Number(mg.value) }, 'viz-emphasisMid'); });
     if (hg) hg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisHigh', { value: Number(hg.value) }, 'viz-emphasisHigh'); });

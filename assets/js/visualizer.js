@@ -62,6 +62,13 @@
       this.beatDecay = 0.90;
       this.beatLevel = 0;
 
+      // beat/tempo controls
+      this.beatSource = 'avg';
+      this.beatHoldMs = 120;
+      this.pulseWidth = 1.0;
+      this.bpmEnabled = false;
+      this.bpm = null;
+
       // Analyzer tuning for better dynamic range
       this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.8;
@@ -78,6 +85,41 @@
 
     setStyle(style) {
       this.style = style;
+      if (this.stylePresetsOn) this.applyStylePresets();
+    }
+
+    setStylePresets(on) {
+      this.stylePresetsOn = !!on;
+      if (on) this.applyStylePresets();
+    }
+
+    applyStylePresets() {
+      // Minimal per-style floors/scales
+      const map = {
+        circle:     { ringFloor: 0.18, spikeScale: 1.15, glowStrength: 12, trailAlpha: 0.0 },
+        radial:     { radialFloor: 0.18, thickness: 1.2, glowStrength: 12, trailAlpha: 0.06 },
+        ring:       { waveScale: 1.15, thickness: 1.3, glowStrength: 10, trailAlpha: 0.06 },
+        bars:       { radialFloor: 0.14, thickness: 1.1, glowStrength: 8,  trailAlpha: 0.04 },
+        mirror:     { radialFloor: 0.14, thickness: 1.1, glowStrength: 8,  trailAlpha: 0.04 },
+        particles:  { glowStrength: 12, trailAlpha: 0.08 }
+      };
+      const p = map[this.style] || {};
+      if (p.ringFloor !== undefined) this.setRingFloor(p.ringFloor);
+      if (p.radialFloor !== undefined) this.setRadialFloor(p.radialFloor);
+      if (p.spikeScale !== undefined) this.setSpikeScale(p.spikeScale);
+      if (p.waveScale !== undefined) this.setWaveScale(p.waveScale);
+      if (p.thickness !== undefined) this.setThickness(p.thickness);
+      if (p.glowStrength !== undefined) this.setGlowStrength(p.glowStrength);
+      if (p.trailAlpha !== undefined) this.setTrailAlpha(p.trailAlpha);
+    }
+
+    setPerformanceMode(on) {
+      this.performance = !!on;
+      this.maxParticles = this.performance ? 100 : 200;
+    }
+
+    bins(base) {
+      return this.performance ? Math.max(24, Math.floor(base * 0.6)) : base;
     }
 
     setColors(c1, c2) {
@@ -412,6 +454,79 @@
       return { levelsL, levelsR, peaksL: this.barPeaksL, peaksR: this.barPeaksR };
     }
 
+    // --- Beat processing ----------------------------------------------------
+
+    setBeatSource(src) {
+      const s = String(src || 'avg').toLowerCase();
+      this.beatSource = ['avg','low','mid','high'].includes(s) ? s : 'avg';
+    }
+
+    setBeatHoldMs(ms) {
+      this.beatHoldMs = Math.max(0, Number(ms) || 0);
+    }
+
+    setPulseWidth(v) {
+      this.pulseWidth = Math.max(0, Math.min(3, Number(v) || 1));
+    }
+
+    setBpmEnabled(on) {
+      this.bpmEnabled = !!on;
+    }
+
+    getBeatEnergy() {
+      // Use mono analyser for beat energy
+      this.analyser.getFloatFrequencyData(this.freqFloat);
+      // normalize and weight by selected source
+      let sum = 0;
+      let cnt = 0;
+      const n = this.freqFloat.length;
+      for (let i = 0; i < n; i++) {
+        const v = this.norm(this.freqFloat[i]);
+        const t = i / (n - 1);
+        let w = 1;
+        if (this.beatSource === 'low') w = 1 - t;
+        else if (this.beatSource === 'mid') w = 1 - Math.abs(t - 0.5) * 2;
+        else if (this.beatSource === 'high') w = t;
+        sum += v * w;
+        cnt++;
+      }
+      return cnt ? sum / cnt : 0;
+    }
+
+    updateBeat() {
+      const now = performance.now();
+      const energy = this.getBeatEnergy();
+
+      // crossing detection
+      const crossed = energy >= this.beatThreshold && (!this._lastAbove || !this._lastAbove);
+      const up = energy >= this.beatThreshold;
+      if (up && !this._lastAbove) {
+        this.beatHoldUntil = now + (this.beatHoldMs || 0);
+        // record beat time for BPM
+        if (!this.beatTimes) this.beatTimes = [];
+        if (this._lastBeatTime) {
+          const interval = (now - this._lastBeatTime) / 1000; // seconds
+          if (interval > 0.25 && interval < 2.5) { // 24–240 BPM
+            this.beatTimes.push(interval);
+            if (this.beatTimes.length > 12) this.beatTimes.shift();
+            // compute BPM from median of last intervals
+            const arr = this.beatTimes.slice().sort((a,b)=>a-b);
+            const mid = arr[Math.floor(arr.length/2)];
+            this.bpm = Math.round(60 / mid);
+          }
+        }
+        this._lastBeatTime = now;
+      }
+      this._lastAbove = up;
+
+      // target level with thresholding and optional hold pulse
+      let target = Math.max(0, energy - this.beatThreshold) * this.beatSense;
+      if (this.beatHoldUntil && now < this.beatHoldUntil) {
+        target = Math.max(target, 0.5); // sustain pulse while hold window active
+      }
+      this.beatLevel = this.beatLevel * this.beatDecay + target * (1 - this.beatDecay);
+    }
+
     draw() {
       const { ctx, canvas } = this;
       const w = canvas.width / (window.devicePixelRatio || 1);
@@ -426,17 +541,20 @@
       // trail effect for select styles; circle keeps a crisp ring
       const trailStyles = new Set(['radial', 'ring', 'particles', 'bars', 'mirror', 'wave']);
       // advance rotation angle once per frame for all styles
-    const now = performance.now();
-    const dt = this.lastTS ? (now - this.lastTS) / 1000 : 0;
-    this.lastTS = now;
-    this.angle += this.rotation * dt;
+      const now = performance.now();
+      const dt = this.lastTS ? (now - this.lastTS) / 1000 : 0;
+      this.lastTS = now;
+      this.angle += this.rotation * dt;
 
-    if (this.trail && trailStyles.has(this.style)) {
-      ctx.fillStyle = `rgba(15,19,34,${this.trailAlpha})`;
-      ctx.fillRect(0, 0, w, h);
-    } else {
-      ctx.clearRect(0, 0, w, h);
-    }
+      if (this.trail && trailStyles.has(this.style)) {
+        ctx.fillStyle = `rgba(15,19,34,${this.trailAlpha})`;
+        ctx.fillRect(0, 0, w, h);
+      } else {
+        ctx.clearRect(0, 0, w, h);
+      }
+
+      // update beat envelope (threshold/decay/hold/BPM)
+      try { this.updateBeat(); } catch (_) {}
 
       // center art (draw under visualization)
       this.drawCenterArt(w, h);
@@ -456,10 +574,21 @@
       else if (this.style === 'mirror') this.drawMirrorBars(w, h);
       else if (this.style === 'particles') this.drawParticles(w, h);
       else this.drawCircle(w, h);
+
+      // BPM overlay
+      if (this.bpmEnabled && this.bpm) {
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = `${Math.max(12, Math.round(h * 0.06))}px ui-monospace, monospace`;
+        ctx.textAlign = 'left';
+        ctx.fillText(`BPM: ${this.bpm}`, 10, 22);
+        ctx.restore();
+      }
     }
 
     drawBars(w, h) {
-      const bins = 96;
+      const bins = this.bins(96);
       const { peaks } = this.getSpectrum(bins, 2.0, this.radialFloor);
       const bw = w / bins;
       const width = Math.max(2, (bw - 4) * (0.75 + 0.25 * this.thickness)); // widen bars with thickness
@@ -474,7 +603,7 @@
     }
 
     drawWave(w, h) {
-      const bins = 256;
+      const bins = this.bins(256);
       const wave = this.getTimeWave(bins);
       this.ctx.beginPath();
       for (let i = 0; i < bins; i++) {
@@ -491,7 +620,7 @@
     drawRingWave(w, h) {
       // smoothed time-domain ring wave (rotation advanced in draw())
 
-      const bins = 240;
+      const bins = this.bins(240);
       const wave = this.getTimeWave(bins);
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
       const scale = Math.min(h / 5, r * 0.75) * this.waveScale;
@@ -512,7 +641,7 @@
 
     drawMirrorBars(w, h) {
       // vertical bars mirrored top/bottom with smoothed spectrum
-      const bins = 100;
+      const bins = this.bins(100);
       const { peaks } = this.getSpectrum(bins, 1.0, this.radialFloor);
       const bw = w / bins;
       const width = Math.max(2, (bw - 4) * (0.75 + 0.25 * this.thickness));
@@ -547,36 +676,26 @@
 
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 
-      const binsHalf = 90;
-      let peaksL, peaksR, levelsL, levelsR;
+      const binsHalf = this.bins(90);
+      let peaksL, peaksR;
       if (this.analyserL && this.analyserR) {
-        const { levelsL: lvlL, levelsR: lvlR, peaksL: pkL, peaksR: pkR } =
+        const { peaksL: pkL, peaksR: pkR } =
           this.getStereoSpectrum(binsHalf, 1.0, this.radialFloor);
-        peaksL = pkL; peaksR = pkR; levelsL = lvlL; levelsR = lvlR;
+        peaksL = pkL; peaksR = pkR;
       } else {
         const mono = this.getSpectrum(binsHalf * 2, 1.0, this.radialFloor);
         peaksL = mono.peaks.slice(0, binsHalf);
         peaksR = mono.peaks.slice(binsHalf);
-        levelsL = mono.levels.slice(0, binsHalf);
-        levelsR = mono.levels.slice(binsHalf);
       }
 
-      // avg for beat ring
-      let avg = 0;
-      for (let i = 0; i < binsHalf; i++) avg += (levelsL[i] + levelsR[i]) * 0.5;
-      avg /= binsHalf;
-
-      // Beat tuning with threshold and decay smoothing
-      const target = Math.max(0, avg - this.beatThreshold) * this.beatSense;
-      this.beatLevel = this.beatLevel * this.beatDecay + target * (1 - this.beatDecay);
+      // Beat ring using global beat level
       const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
-
       const beatRadius = r + pulse * (h / 16);
       this.ctx.save();
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, beatRadius, 0, Math.PI * 2);
       this.ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-      this.ctx.lineWidth = 2.5 * this.thickness;
+      this.ctx.lineWidth = (2.5 * this.thickness) * (1 + pulse * this.pulseWidth * 0.8);
       this.ctx.stroke();
       this.ctx.restore();
 
@@ -723,16 +842,7 @@
     }
 
     drawParticles(w, h) {
-      // particle orbit around ring with beat-driven spawning
-      this.analyser.getFloatFrequencyData(this.freqFloat);
-      let avg = 0;
-      for (let i = 0; i < this.freqFloat.length; i++) avg += this.norm(this.freqFloat[i]);
-      avg /= this.freqFloat.length;
-
-      // beat smoothing and thresholding
-      const target = Math.max(0, avg - this.beatThreshold) * this.beatSense;
-      this.beatLevel = this.beatLevel * this.beatDecay + target * (1 - this.beatDecay);
-
+      // particle orbit around ring with beat-driven spawning using global beat level
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
       const pulse = Math.max(0, this.beatLevel) * this.beatBoost;
       const spawn = Math.min(8, Math.floor(pulse * 12));
