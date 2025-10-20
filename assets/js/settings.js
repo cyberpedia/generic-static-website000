@@ -14,10 +14,12 @@ const Settings = (() => {
     const sv = document.getElementById('save-viz-preset');
     const se = document.getElementById('save-eq-preset');
     const ap = document.getElementById('apply-preset');
+    const del = document.getElementById('delete-preset');
     if (!sv || !se || !ap) return;
     sv.addEventListener('click', saveVizPreset);
     se.addEventListener('click', saveEqPreset);
     ap.addEventListener('click', applySelectedPreset);
+    if (del) del.addEventListener('click', deleteSelectedPreset);
   }
 
   function addDefaultVizPresets() {
@@ -184,6 +186,21 @@ const Settings = (() => {
         sl.value = g;
         App.state.eq.setGain(i, g);
       });
+    }
+  }
+
+  async function deleteSelectedPreset() {
+    const sel = document.getElementById('preset-list').value || '';
+    if (!sel) return;
+    const [type, name] = sel.split(':');
+    if (!type || !name) return;
+    const res = await API.post('api/settings.php', { action: 'delete', type, name });
+    if (res.ok) {
+      if (type === 'viz') delete state.presets.viz[name];
+      else delete state.presets.eq[name];
+      renderPresetList();
+    } else {
+      alert(res.error || 'Failed to delete');
     }
   }
 

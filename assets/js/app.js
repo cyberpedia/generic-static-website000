@@ -45,13 +45,30 @@ const App = (() => {
     state.ctx = new (window.AudioContext || window.webkitAudioContext)();
     state.master = state.ctx.createGain();
     state.eq = new Equalizer(state.ctx);
+
+    // Main analyser (mono mix to destination)
     state.analyser = state.ctx.createAnalyser();
     state.analyser.fftSize = 2048;
     state.analyser.smoothingTimeConstant = 0.8;
 
-    // Audio chain: sources -> eq -> analyser -> destination
+    // Stereo analysers via channel splitter
+    state.analyserL = state.ctx.createAnalyser();
+    state.analyserR = state.ctx.createAnalyser();
+    state.analyserL.fftSize = 2048;
+    state.analyserR.fftSize = 2048;
+    state.analyserL.smoothingTimeConstant = 0.8;
+    state.analyserR.smoothingTimeConstant = 0.8;
+
+    state.splitter = state.ctx.createChannelSplitter(2);
+
+    // Audio chain:
+    // sources -> eq -> analyser -> destination
+    //                   \\-> splitter -> analyserL/R (for visuals only)
     state.eq.connect(state.analyser);
+    state.eq.connect(state.splitter);
     state.analyser.connect(state.ctx.destination);
+    state.splitter.connect(state.analyserL, 0);
+    state.splitter.connect(state.analyserR, 1);
 
     // For recording visualizer + audio
     state.recordingDest = state.ctx.createMediaStreamDestination();
@@ -61,6 +78,7 @@ const App = (() => {
     setupAudioElements();
     const canvas = document.getElementById('viz');
     state.viz = new Visualizer(state.analyser, canvas);
+    state.viz.setStereoAnalysers(state.analyserL, state.analyserR);
     // apply tuning defaults from UI
     try {
       state.viz.setRotationSpeed(Number(document.getElementById('viz-rot').value || 0.6));
@@ -232,6 +250,9 @@ const App = (() => {
     const dur = active.duration || 0;
     const cur = active.currentTime || 0;
     document.getElementById('track-time').textContent = `${API.fmtTime(cur)} / ${API.fmtTime(dur)}`;
+    if (state.viz && dur > 0) {
+      state.viz.setProgress(cur / dur);
+    }
   }
 
   function onEnded() {
