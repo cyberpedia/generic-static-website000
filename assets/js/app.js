@@ -65,16 +65,16 @@ const App = (() => {
 
     // Main analyser (mono mix to destination)
     state.analyser = state.ctx.createAnalyser();
-    state.analyser.fftSize = 2048;
-    state.analyser.smoothingTimeConstant = 0.8;
+    state.analyser.fftSize = 1024; // lighter FFT for performance
+    state.analyser.smoothingTimeConstant = 0.75;
 
     // Stereo analysers via channel splitter
     state.analyserL = state.ctx.createAnalyser();
     state.analyserR = state.ctx.createAnalyser();
-    state.analyserL.fftSize = 2048;
-    state.analyserR.fftSize = 2048;
-    state.analyserL.smoothingTimeConstant = 0.8;
-    state.analyserR.smoothingTimeConstant = 0.8;
+    state.analyserL.fftSize = 1024;
+    state.analyserR.fftSize = 1024;
+    state.analyserL.smoothingTimeConstant = 0.75;
+    state.analyserR.smoothingTimeConstant = 0.75;
 
     state.splitter = state.ctx.createChannelSplitter(2);
 
@@ -181,17 +181,19 @@ const App = (() => {
     state.audioA.addEventListener('ended', onEnded);
     state.audioB.addEventListener('ended', onEnded);
 
-    // super logging of audio element events
+    // super logging of audio element events (disabled by default; enable via Debug toggle)
     const logAudioEvents = (label, el) => {
       const events = ['error','stalled','abort','emptied','waiting','canplay','canplaythrough','pause','play','playing','loadedmetadata','loadeddata','timeupdate','ended'];
       events.forEach(ev => {
         el.addEventListener(ev, (e) => {
-          try { if (window.BUG) BUG.log(`audio:${label}:${ev}`, { currentTime: el.currentTime, src: el.src }); } catch (_) {}
+          try { if (window.DEBUG && window.BUG) BUG.log(`audio:${label}:${ev}`, { currentTime: el.currentTime, src: el.src }); } catch (_) {}
         });
       });
     };
-    logAudioEvents('A', state.audioA);
-    logAudioEvents('B', state.audioB);
+    if (window.DEBUG) {
+      logAudioEvents('A', state.audioA);
+      logAudioEvents('B', state.audioB);
+    }
   }
 
   async function loadLibrary(rescan = false) {
@@ -370,7 +372,6 @@ ${item.name}`);
     const dur = active.duration || 0;
     const cur = active.currentTime || 0;
     document.getElementById('track-time').textContent = `${API.fmtTime(cur)} / ${API.fmtTime(dur)}`;
-    try { if (window.BUG) BUG.log('updateTime', { cur, dur }); } catch (_) {}
     if (state.viz && dur > 0) {
       state.viz.setProgress(cur / dur);
     }

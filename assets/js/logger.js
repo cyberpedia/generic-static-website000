@@ -1,12 +1,18 @@
 (function(){
-  // Studio logger: writes to #live-console if present, else falls back to a floating panel
+  // Studio logger with safe defaults: disabled unless toggled
   const Logger = {
     init() {
       if (window.BUG) return;
+
       const api = {
         lines: [],
         panel: null,
         pre: null,
+        enabled: false,
+        origConsole: null,
+        errorHandler: null,
+        rejectHandler: null,
+
         show() {
           if (!this.panel) this._createPanel();
           this.panel.style.display = 'block';
@@ -15,39 +21,39 @@
           if (this.panel) this.panel.style.display = 'none';
         },
         _appendLine(line) {
-          if (!this.pre) return;
+          if (!this.pre || !this.enabled) return;
           const div = document.createElement('div');
           div.className = 'line';
           div.textContent = line;
           this.pre.appendChild(div);
+          // cap to 300 lines
+          if (this.pre.children.length > 300) {
+            this.pre.removeChild(this.pre.firstChild);
+          }
           this.pre.scrollTop = this.pre.scrollHeight;
         },
         log(msg, data) {
+          if (!this.enabled) return;
           const t = new Date().toLocaleTimeString();
           const line = `[${t}] ${String(msg)}${data !== undefined ? ' ' + JSON.stringify(data) : ''}`;
           this.lines.push(line);
           this._appendLine(line);
-          try { console.log(line); } catch (_) {}
         },
-        warn(msg, data) {
-          this.log('WARN: ' + msg, data);
-        },
-        error(msg, err) {
-          this.log('ERROR: ' + msg + (err && err.message ? (' ' + err.message) : ''));
-        },
+        warn(msg, data) { this.log('WARN: ' + msg, data); },
+        error(msg, err) { this.log('ERROR: ' + msg + (err && err.message ? (' ' + err.message) : '')); },
         clear() {
           this.lines = [];
           if (this.pre) this.pre.innerHTML = '';
         },
+
         _createPanel() {
-          // Prefer the in-layout console container
           const anchor = document.getElementById('live-console');
           if (anchor) {
             this.panel = anchor;
             this.pre = anchor;
             return;
           }
-          // Fallback to floating panel
+          // Fallback floating panel (rare)
           const panel = document.createElement('div');
           panel.id = 'debug-panel';
           panel.style.position = 'fixed';
@@ -78,39 +84,85 @@
           document.body.appendChild(panel);
           this.panel = panel;
           this.pre = pre;
+        },
+
+        enable() {
+          if (this.enabled) return;
+          this.enabled = true;
+          window.DEBUG = true;
+
+          // Hook Clear button
+          const clearBtn = document.getElementById('console-clear');
+          if (clearBtn) clearBtn.addEventListener('click', () => { this.clear(); });
+
+          // Capture errors
+          this.errorHandler = (e) => { this.error('window.error', e.error || e.message || e); };
+          this.rejectHandler = (e) => { this.error('unhandledrejection', e.reason || e); };
+          window.addEventListener('error', this.errorHandler);
+          window.addEventListener('unhandledrejection', this.rejectHandler);
+
+          // Intercept console methods
+          try {
+            this.origConsole = {
+              log: console.log.bind(console),
+              warn: console.warn.bind(console),
+              error: console.error.bind(console)
+            };
+            console.log = (...args) => { this.origConsole.log(...args); try { this.log(args.map(String).join(' ')); } catch (_) {} };
+            console.warn = (...args) => { this.origConsole.warn(...args); try { this.warn(args.map(String).join(' ')); } catch (_) {} };
+            console.error = (...args) => { this.origConsole.error(...args); try { this.error(args.map(String).join(' ')); } catch (_) {} };
+          } catch (_) {}
+
+          const toggle = document.getElementById('debug-toggle');
+          if (toggle) toggle.textContent = 'Disable Debug';
+
+          this.show();
+          this.log('Debug Logger enabled.');
+        },
+
+        disable() {
+          if (!this.enabled) return;
+          this.enabled = false;
+          window.DEBUG = false;
+
+          // Restore console
+          try {
+            if (this.origConsole) {
+              console.log = this.origConsole.log;
+              console.warn = this.origConsole.warn;
+              console.error = this.origConsole.error;
+            }
+          } catch (_) {}
+
+          // Remove error hooks
+          try {
+            if (this.errorHandler) window.removeEventListener('error', this.errorHandler);
+            if (this.rejectHandler) window.removeEventListener('unhandledrejection', this.rejectHandler);
+          } catch (_) {}
+
+          const toggle = document.getElementById('debug-toggle');
+          if (toggle) toggle.textContent = 'Enable Debug';
+
+          this.log('Debug Logger disabled.');
         }
       };
+
       window.BUG = api;
-
-      // Hook Clear button in the UI if present
-      const clearBtn = document.getElementById('console-clear');
-      if (clearBtn) clearBtn.addEventListener('click', () => { api.clear(); });
-
-      // Capture window errors and unhandled rejections
-      window.addEventListener('error', (e) => {
-        api.error('window.error', e.error || e.message || e);
-      });
-      window.addEventListener('unhandledrejection', (e) => {
-        api.error('unhandledrejection', e.reason || e);
-      });
-
-      // Intercept console methods
-      try {
-        const orig = {
-          log: console.log.bind(console),
-          warn: console.warn.bind(console),
-          error: console.error.bind(console)
-        };
-        console.log = (...args) => { orig.log(...args); try { api.log(args.map(String).join(' ')); } catch (_) {} };
-        console.warn = (...args) => { orig.warn(...args); try { api.warn(args.map(String).join(' ')); } catch (_) {} };
-        console.error = (...args) => { orig.error(...args); try { api.error(args.map(String).join(' ')); } catch (_) {} };
-      } catch (_) {}
+      window.DEBUG = false;
 
       api.show();
-      api.log('Debug Logger initialized.');
+
+      // Wire toggle button
+      const toggle = document.getElementById('debug-toggle');
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          if (!api.enabled) api.enable(); else api.disable();
+        });
+      }
+
+      const clearBtn = document.getElementById('console-clear');
+      if (clearBtn) clearBtn.addEventListener('click', () => { api.clear(); });
     }
   };
-  document.addEventListener('DOMContentLoaded', () => {
-    Logger.init();
-  });
+  document.addEventListener('DOMContentLoaded', () => { Logger.init(); });
 })();
