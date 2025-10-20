@@ -140,6 +140,7 @@
     window.BUG = BUG;
 
     append('BUG', ['Logger initialized']);
+    try { console.log('Debug Logger initialized'); } catch (_) {}
   }
 
   init();

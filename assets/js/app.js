@@ -33,7 +33,11 @@ const App = (() => {
       await API.init();
     } catch (e) {
       console.warn('API init failed, continuing without session', e);
+      try { if (window.BUG) BUG.warn('API.init failed', e); } catch (_) {}
     }
+
+    // Ensure debug panel is visible
+    try { if (window.BUG) { BUG.show(); BUG.log('App.init'); } } catch (_) {}
 
     // Defer AudioContext creation to first user gesture (mobile autoplay policy)
     bindUI();
@@ -300,6 +304,7 @@ const App = (() => {
     const dur = active.duration || 0;
     const cur = active.currentTime || 0;
     document.getElementById('track-time').textContent = `${API.fmtTime(cur)} / ${API.fmtTime(dur)}`;
+    try { if (window.BUG) BUG.log('updateTime', { cur, dur }); } catch (_) {}
     if (state.viz && dur > 0) {
       state.viz.setProgress(cur / dur);
     }
