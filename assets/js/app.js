@@ -125,6 +125,15 @@ const App = (() => {
       // beat tuning defaults
       if (typeof state.viz.setBeatSensitivity === 'function') state.viz.setBeatSensitivity(Number(document.getElementById('viz-beat-sense').value || 1));
       if (typeof state.viz.setBeatBoost === 'function') state.viz.setBeatBoost(Number(document.getElementById('viz-beat-boost').value || 1));
+      if (typeof state.viz.setBeatThreshold === 'function') state.viz.setBeatThreshold(Number(document.getElementById('viz-beat-thresh').value || 0.08));
+      if (typeof state.viz.setBeatDecay === 'function') state.viz.setBeatDecay(Number(document.getElementById('viz-beat-decay').value || 0.90));
+      // emphasis and smoothing
+      if (typeof state.viz.setEmphasis === 'function') state.viz.setEmphasis(
+        Number(document.getElementById('viz-low-gain').value || 1),
+        Number(document.getElementById('viz-mid-gain').value || 1),
+        Number(document.getElementById('viz-high-gain').value || 1)
+      );
+      if (typeof state.viz.setSmoothing === 'function') state.viz.setSmoothing(Number(document.getElementById('viz-smooth').value || 0.75));
     } catch (_) {}
     state.viz.start();
 
@@ -658,6 +667,12 @@ ${item.name}`);
     const ws = document.getElementById('viz-wave-scale');
     const bs = document.getElementById('viz-beat-sense');
     const bb = document.getElementById('viz-beat-boost');
+    const bt = document.getElementById('viz-beat-thresh');
+    const bd = document.getElementById('viz-beat-decay');
+    const lg = document.getElementById('viz-low-gain');
+    const mg = document.getElementById('viz-mid-gain');
+    const hg = document.getElementById('viz-high-gain');
+    const sm = document.getElementById('viz-smooth');
 
     rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); logAction('viz.rot', { value: Number(e.target.value) }, 'viz-rot'); });
     dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); logAction('viz.decay', { value: Number(e.target.value) }, 'viz-decay'); });
@@ -669,6 +684,12 @@ ${item.name}`);
     ws.addEventListener('input', e => { if (state.viz) state.viz.setWaveScale(Number(e.target.value)); logAction('viz.waveScale', { value: Number(e.target.value) }, 'viz-waveScale'); });
     if (bs) bs.addEventListener('input', e => { if (state.viz && state.viz.setBeatSensitivity) state.viz.setBeatSensitivity(Number(e.target.value)); logAction('viz.beatSense', { value: Number(e.target.value) }, 'viz-beatSense'); });
     if (bb) bb.addEventListener('input', e => { if (state.viz && state.viz.setBeatBoost) state.viz.setBeatBoost(Number(e.target.value)); logAction('viz.beatBoost', { value: Number(e.target.value) }, 'viz-beatBoost'); });
+    if (bt) bt.addEventListener('input', e => { if (state.viz && state.viz.setBeatThreshold) state.viz.setBeatThreshold(Number(e.target.value)); logAction('viz.beatThreshold', { value: Number(e.target.value) }, 'viz-beatThreshold'); });
+    if (bd) bd.addEventListener('input', e => { if (state.viz && state.viz.setBeatDecay) state.viz.setBeatDecay(Number(e.target.value)); logAction('viz.beatDecay', { value: Number(e.target.value) }, 'viz-beatDecay'); });
+    if (lg) lg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisLow', { value: Number(lg.value) }, 'viz-emphasisLow'); });
+    if (mg) mg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisMid', { value: Number(mg.value) }, 'viz-emphasisMid'); });
+    if (hg) hg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisHigh', { value: Number(hg.value) }, 'viz-emphasisHigh'); });
+    if (sm) sm.addEventListener('input', e => { if (state.viz && state.viz.setSmoothing) state.viz.setSmoothing(Number(e.target.value)); logAction('viz.smoothing', { value: Number(e.target.value) }, 'viz-smoothing'); });
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
       const panel = document.getElementById('eq-panel');

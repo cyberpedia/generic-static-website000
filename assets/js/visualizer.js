@@ -52,6 +52,16 @@
       // progress arc (0..1)
       this.progress = 0;
 
+      // emphasis gains (low/mid/high)
+      this.lowGain = 1.0;
+      this.midGain = 1.0;
+      this.highGain = 1.0;
+
+      // beat smoothing
+      this.beatThreshold = 0.08;
+      this.beatDecay = 0.90;
+      this.beatLevel = 0;
+
       // Analyzer tuning for better dynamic range
       this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.8;
@@ -130,6 +140,28 @@
 
     setBeatBoost(v) {
       this.beatBoost = Math.max(0, Math.min(2.5, Number(v) || 1));
+    }
+
+    setBeatThreshold(v) {
+      this.beatThreshold = Math.max(0, Math.min(0.6, Number(v) || 0.08));
+    }
+
+    setBeatDecay(v) {
+      const d = Number(v);
+      if (d > 0 && d < 1) this.beatDecay = d;
+    }
+
+    setEmphasis(low, mid, high) {
+      this.lowGain = Math.max(0, Number(low) || 0);
+      this.midGain = Math.max(0, Number(mid) || 0);
+      this.highGain = Math.max(0, Number(high) || 0);
+    }
+
+    setSmoothing(v) {
+      const s = Math.max(0.5, Math.min(0.95, Number(v) || 0.75));
+      this.analyser.smoothingTimeConstant = s;
+      if (this.analyserL) this.analyserL.smoothingTimeConstant = s;
+      if (this.analyserR) this.analyserR.smoothingTimeConstant = s;
     }
 
     setAlbumArt(url) {
@@ -214,9 +246,14 @@
         }
         let v = acc / cnt;
 
-        // frequency emphasis so highs are visible around full ring
+        // frequency emphasis controlled by low/mid/high gains
         const t = i / (bins - 1);
-        const emphasis = 0.45 + 0.55 * Math.pow(t, 0.8); // boost high bins modestly
+        const lowW = 1 - t;
+        const midW = 1 - Math.abs(t - 0.5) * 2;
+        const highW = t;
+        const sumG = this.lowGain + this.midGain + this.highGain;
+        const mix = sumG > 0 ? ((this.lowGain * lowW) + (this.midGain * midW) + (this.highGain * highW)) / sumG : 1;
+        const emphasis = 0.4 + 0.6 * mix;
         v *= emphasis;
 
         // minimum floor so no dead zones
@@ -335,7 +372,12 @@
           }
           let v = acc / cnt;
           const t = i / (bins - 1);
-          const emphasis = 0.45 + 0.55 * Math.pow(t, 0.8);
+          const lowW = 1 - t;
+          const midW = 1 - Math.abs(t - 0.5) * 2;
+          const highW = t;
+          const sumG = this.lowGain + this.midGain + this.highGain;
+          const mix = sumG > 0 ? ((this.lowGain * lowW) + (this.midGain * midW) + (this.highGain * highW)) / sumG : 1;
+          const emphasis = 0.4 + 0.6 * mix;
           v *= emphasis;
           const floor = floorOverride !== null ? floorOverride : 0.12;
           v = floor + v * (1 - floor);
@@ -524,8 +566,11 @@
       for (let i = 0; i < binsHalf; i++) avg += (levelsL[i] + levelsR[i]) * 0.5;
       avg /= binsHalf;
 
-      // Beat tuning: sensitivity and boost
-      const pulse = Math.pow(Math.max(0, avg * this.beatSense), 1.2) * this.beatBoost;
+      // Beat tuning with threshold and decay smoothing
+      const target = Math.max(0, avg - this.beatThreshold) * this.beatSense;
+      this.beatLevel = this.beatLevel * this.beatDecay + target * (1 - this.beatDecay);
+      const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
+
       const beatRadius = r + pulse * (h / 16);
       this.ctx.save();
       this.ctx.beginPath();
@@ -684,9 +729,13 @@
       for (let i = 0; i < this.freqFloat.length; i++) avg += this.norm(this.freqFloat[i]);
       avg /= this.freqFloat.length;
 
+      // beat smoothing and thresholding
+      const target = Math.max(0, avg - this.beatThreshold) * this.beatSense;
+      this.beatLevel = this.beatLevel * this.beatDecay + target * (1 - this.beatDecay);
+
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-      const pulse = Math.max(0, avg * this.beatSense);
-      const spawn = Math.min(8, Math.floor(pulse * 12 * this.beatBoost));
+      const pulse = Math.max(0, this.beatLevel) * this.beatBoost;
+      const spawn = Math.min(8, Math.floor(pulse * 12));
       for (let s = 0; s < spawn; s++) {
         if (this.particles.length < this.maxParticles) {
           this.particles.push({
