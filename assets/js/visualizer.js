@@ -358,7 +358,7 @@ class Visualizer {
     const h = canvas.height / (window.devicePixelRatio || 1);
 
     // trail effect for select styles; circle keeps a crisp ring
-    const trailStyles = new Set(['radial', 'ring', 'particles']);
+    const trailStyles = new Set(['radial', 'ring', 'particles', 'bars', 'mirror', 'wave']);
     if (this.trail && trailStyles.has(this.style)) {
       ctx.fillStyle = `rgba(15,19,34,${this.trailAlpha})`;
       ctx.fillRect(0, 0, w, h);
@@ -388,12 +388,15 @@ class Visualizer {
 
   drawBars(w, h) {
     const bins = 96;
-    const { peaks } = this.getSpectrum(bins, 2.0);
+    const { peaks } = this.getSpectrum(bins, 2.0, this.radialFloor);
     const bw = w / bins;
+    const width = Math.max(2, (bw - 4) * (0.75 + 0.25 * this.thickness)); // widen bars with thickness
+    const gap = Math.max(2, (bw - width));
     for (let i = 0; i < bins; i++) {
       const v = peaks[i];
       const bh = v * h;
-      ctxRoundRect(this.ctx, i * bw + 2, h - bh, bw - 4, bh, 4);
+      const x = i * bw + (gap / 2);
+      ctxRoundRect(this.ctx, x, h - bh, width, bh, 4);
       this.ctx.fill();
     }
   }
@@ -405,11 +408,11 @@ class Visualizer {
     for (let i = 0; i < bins; i++) {
       const x = (i / (bins - 1)) * w;
       const v = (wave[i] - 0.08) / 0.92; // re-center around 0
-      const y = h / 2 + v * (h / 2) * 0.9;
+      const y = h / 2 + v * (h / 2) * 0.9 * this.waveScale;
       if (i === 0) this.ctx.moveTo(x, y);
       else this.ctx.lineTo(x, y);
     }
-    this.ctx.lineWidth = 2.0;
+    this.ctx.lineWidth = 2.0 * this.thickness;
     this.ctx.stroke();
   }
 
@@ -442,8 +445,10 @@ class Visualizer {
   drawMirrorBars(w, h) {
     // vertical bars mirrored top/bottom with smoothed spectrum
     const bins = 100;
-    const { peaks } = this.getSpectrum(bins, 1.0, 0.14);
+    const { peaks } = this.getSpectrum(bins, 1.0, this.radialFloor);
     const bw = w / bins;
+    const width = Math.max(2, (bw - 4) * (0.75 + 0.25 * this.thickness));
+    const gap = Math.max(2, (bw - width));
 
     this.ctx.save();
     this.ctx.lineCap = 'round';
@@ -451,17 +456,17 @@ class Visualizer {
     for (let i = 0; i < bins; i++) {
       const v = peaks[i];
       const bh = v * (h / 2);
-      const x = i * bw + 2;
+      const x = i * bw + (gap / 2);
 
       // gradient color along x
       const t = i / (bins - 1);
       this.ctx.fillStyle = lerpColor(this.color1, this.color2, t);
 
       // bottom bars
-      ctxRoundRect(this.ctx, x, h - bh, bw - 4, bh, 4);
+      ctxRoundRect(this.ctx, x, h - bh, width, bh, 4);
       this.ctx.fill();
       // top bars mirrored
-      ctxRoundRect(this.ctx, x, 0, bw - 4, bh, 4);
+      ctxRoundRect(this.ctx, x, 0, width, bh, 4);
       this.ctx.fill();
     }
 
@@ -670,6 +675,7 @@ class Visualizer {
     }
     // update and draw
     const next = [];
+    const sizeScale = 1 + 0.4 * (this.thickness - 1);
     this.ctx.save();
     for (const p of this.particles) {
       p.theta += p.speed * 0.02;
@@ -678,7 +684,7 @@ class Visualizer {
       const x = cx + Math.cos(p.theta) * p.radius;
       const y = cy + Math.sin(p.theta) * p.radius;
       this.ctx.beginPath();
-      this.ctx.arc(x, y, 2 + (1 - p.life) * 3, 0, Math.PI * 2);
+      this.ctx.arc(x, y, (2 + (1 - p.life) * 3) * sizeScale, 0, Math.PI * 2);
       this.ctx.fillStyle = `rgba(255,255,255,${0.2 + p.life * 0.6})`;
       this.ctx.fill();
       next.push(p);
