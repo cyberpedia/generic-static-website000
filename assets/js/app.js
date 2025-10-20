@@ -400,20 +400,20 @@ const App = (() => {
     }
 
     document.getElementById('viz-style').addEventListener('change', (e) => {
-      state.viz.setStyle(e.target.value);
+      if (state.viz) state.viz.setStyle(e.target.value);
     });
     document.getElementById('viz-color-1').addEventListener('change', (e) => {
-      state.viz.setColors(e.target.value, document.getElementById('viz-color-2').value);
+      if (state.viz) state.viz.setColors(e.target.value, document.getElementById('viz-color-2').value);
     });
     document.getElementById('viz-color-2').addEventListener('change', (e) => {
-      state.viz.setColors(document.getElementById('viz-color-1').value, e.target.value);
+      if (state.viz) state.viz.setColors(document.getElementById('viz-color-1').value, e.target.value);
     });
     const glow = document.getElementById('viz-glow');
     const trail = document.getElementById('viz-trail');
     const art = document.getElementById('viz-art');
-    if (glow) glow.addEventListener('change', () => state.viz.setGlow(glow.checked));
-    if (trail) trail.addEventListener('change', () => state.viz.setTrail(trail.checked));
-    if (art) art.addEventListener('change', () => state.viz.setShowArt(art.checked));
+    if (glow) glow.addEventListener('change', () => { if (state.viz) state.viz.setGlow(glow.checked); });
+    if (trail) trail.addEventListener('change', () => { if (state.viz) state.viz.setTrail(trail.checked); });
+    if (art) art.addEventListener('change', () => { if (state.viz) state.viz.setShowArt(art.checked); });
 
     // tuning controls
     const rot = document.getElementById('viz-rot');
@@ -425,14 +425,14 @@ const App = (() => {
     const ss = document.getElementById('viz-spike-scale');
     const ws = document.getElementById('viz-wave-scale');
 
-    rot.addEventListener('input', e => state.viz.setRotationSpeed(Number(e.target.value)));
-    dec.addEventListener('input', e => state.viz.setDecay(Number(e.target.value)));
-    th.addEventListener('input', e => state.viz.setThickness(Number(e.target.value)));
-    rf.addEventListener('input', e => { const v = Number(e.target.value); state.viz.setRingFloor(v); state.viz.setRadialFloor(v); });
-    gs.addEventListener('input', e => state.viz.setGlowStrength(Number(e.target.value)));
-    ta.addEventListener('input', e => state.viz.setTrailAlpha(Number(e.target.value)));
-    ss.addEventListener('input', e => state.viz.setSpikeScale(Number(e.target.value)));
-    ws.addEventListener('input', e => state.viz.setWaveScale(Number(e.target.value)));
+    rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); });
+    dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); });
+    th.addEventListener('input', e => { if (state.viz) state.viz.setThickness(Number(e.target.value)); });
+    rf.addEventListener('input', e => { if (state.viz) { const v = Number(e.target.value); state.viz.setRingFloor(v); state.viz.setRadialFloor(v); } });
+    gs.addEventListener('input', e => { if (state.viz) state.viz.setGlowStrength(Number(e.target.value)); });
+    ta.addEventListener('input', e => { if (state.viz) state.viz.setTrailAlpha(Number(e.target.value)); });
+    ss.addEventListener('input', e => { if (state.viz) state.viz.setSpikeScale(Number(e.target.value)); });
+    ws.addEventListener('input', e => { if (state.viz) state.viz.setWaveScale(Number(e.target.value)); });
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
       document.getElementById('eq-panel').classList.toggle('show');

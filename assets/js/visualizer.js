@@ -504,7 +504,7 @@ class Visualizer {
 
     // avg for beat ring
     let avg = 0;
-    for (let i = 0;  <p binsHalf; i++) avg += (levelsL[i] + levelsR[i]) * 0.5;
+    for (let i = 0; i < binsHalf; i++) avg += (levelsL[i] + levelsR[i]) * 0.5;
     avg /= binsHalf;
 
     // Beat ring pulse
@@ -521,7 +521,7 @@ class Visualizer {
     this.ctx.lineCap = 'round';
 
     const total = binsHalf * 2;
-    for (let i = 0;  <) binsHalf; i++) {
+    for (let i = 0; i < binsHalf; i++) {
       // left half
       const pvL = peaksL[i];
       const angleL = (i / total) * Math.PI * 2 + this.angle;
@@ -583,9 +583,8 @@ class Visualizer {
       this.ctx.lineCap = 'round';
       this.ctx.stroke();
       this.ctx.restore();
-    }_code
- new </}
-}
+    }
+  }
 
   drawCircle(w, h) {
     // base ring + controlled amplitude spikes; stereo mirrored if available
