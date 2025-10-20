@@ -38,6 +38,9 @@
       // Using 4 segments by default so all sides pulse uniformly to the same spectrum pattern.
       this.segments = 4;
 
+      // dynamic fast mode flag (auto when heavy styles/settings)
+      this.fast = false;
+
       // particles
       this.particles = [];
       this.maxParticles = 200;
@@ -121,7 +124,10 @@
     }
 
     bins(base) {
-      return this.performance ? Math.max(24, Math.floor(base * 0.6)) : base;
+      let scale = 1.0;
+      if (this.performance) scale *= 0.6;
+      if (this.fast) scale *= 0.7;
+      return Math.max(24, Math.floor(base * scale));
     }
 
     setColors(c1, c2) {
@@ -554,7 +560,8 @@
       this.angle += this.rotation * dt;
 
       if (this.trail && trailStyles.has(this.style)) {
-        ctx.fillStyle = `rgba(15,19,34,${this.trailAlpha})`;
+        const alpha = this.fast ? Math.min(this.trailAlpha, 0.04) : this.trailAlpha;
+        ctx.fillStyle = `rgba(15,19,34,${alpha})`;
         ctx.fillRect(0, 0, w, h);
       } else {
         ctx.clearRect(0, 0, w, h);
@@ -563,12 +570,21 @@
       // update beat envelope (threshold/decay/hold/BPM)
       try { this.updateBeat(); } catch (_) {}
 
+      // auto fast-mode heuristic for heavy circular styles
+      const heavy = (this.style === 'circle' || this.style === 'radial');
+      if (heavy) {
+        const estOps = (this.segments | 0) * 180; // approximate strokes per frame
+        this.fast = estOps > 360;                 // 4*180 triggers fast mode on many mobiles
+      } else {
+        this.fast = false;
+      }
+
       // center art (draw under visualization)
       this.drawCenterArt(w, h);
 
-      // glow
+      // glow (reduced blur in fast mode)
       ctx.shadowColor = this.glow ? this.color2 : 'transparent';
-      ctx.shadowBlur = this.glow ? this.glowStrength : 0;
+      ctx.shadowBlur = this.glow ? (this.fast ? Math.min(this.glowStrength, 6) : this.glowStrength) : 0;
 
       const grad = API.gradient(ctx, this.color1, this.color2, w, h);
       ctx.fillStyle = grad;
@@ -703,32 +719,37 @@
       this.ctx.save();
       this.ctx.lineCap = 'round';
 
-      const segs = Math.max(1, this.segments | 0);
+      const segs = Math.max(1, (this.fast ? Math.max(1, Math.floor(this.segments / 2)) : this.segments) | 0);
       for (let i = 0; i < bins; i++) {
         const v = peaks[i];
+        // preselect color and width based on mode
+        const colorT = i / (bins - 1);
+        const strokeClr = this.fast ? this.color2 : lerpColor(this.color1, this.color2, colorT);
+        const lw = (this.fast ? (1.6 + v * 2.6) : (2.2 + v * 3.6)) * this.thickness;
         for (let s = 0; s < segs; s++) {
           const tIdx = (i + s * bins);
           const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle;
-          const len = r + Math.pow(v, 1.2) * (h / 3) + pulse * (h / 8); // add global beat to all sides
+          const len = r + Math.pow(v, 1.2) * (h / 3) * (this.fast ? 0.85 : 1.0) + pulse * (h / 8);
           const x0 = cx + Math.cos(ang) * r;
           const y0 = cy + Math.sin(ang) * r;
           const x1 = cx + Math.cos(ang) * len;
           const y1 = cy + Math.sin(ang) * len;
 
-          const t = i / (bins - 1);
-          this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
-          this.ctx.lineWidth = (2.2 + v * 3.6) * this.thickness;
+          this.ctx.strokeStyle = strokeClr;
+          this.ctx.lineWidth = lw;
 
           this.ctx.beginPath();
           this.ctx.moveTo(x0, y0);
           this.ctx.lineTo(x1, y1);
           this.ctx.stroke();
 
-          // cap dot
-          this.ctx.beginPath();
-          this.ctx.arc(x1, y1, (2.0 + v * 2.6) * this.thickness, 0, Math.PI * 2);
-          this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
-          this.ctx.fill();
+          if (!this.fast) {
+            // cap dot only in normal mode (expensive to draw many arcs on mobile)
+            this.ctx.beginPath();
+            this.ctx.arc(x1, y1, (2.0 + v * 2.6) * this.thickness, 0, Math.PI * 2);
+            this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            this.ctx.fill();
+          }
         }
       }
 
@@ -766,22 +787,28 @@
       const spikeScale = Math.min(h / 4, r * 0.65) * this.spikeScale;
 
       const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
-      const segs = Math.max(1, this.segments | 0);
+      const segs = Math.max(1, (this.fast ? Math.max(1, Math.floor(this.segments / 2)) : this.segments) | 0);
       for (let i = 0; i < bins; i++) {
         const v = peaks[i];
+        const lw = (this.fast ? (1.4 + v * 1.8) : (1.8 + v * 2.0)) * this.thickness;
         for (let s = 0; s < segs; s++) {
           const tIdx = (i + s * bins);
           const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle;
-          const len = r + Math.pow(v, 1.10) * spikeScale + pulse * (h / 10); // add global beat to spike length
+          const len = r + Math.pow(v, 1.10) * spikeScale * (this.fast ? 0.85 : 1.0) + pulse * (h / 10);
           const x0 = cx + Math.cos(ang) * r;
           const y0 = cy + Math.sin(ang) * r;
           const x1 = cx + Math.cos(ang) * len;
           const y1 = cy + Math.sin(ang) * len;
 
+          if (this.fast) {
+            // single color for speed
+            this.ctx.strokeStyle = this.color2;
+          }
+
           this.ctx.beginPath();
           this.ctx.moveTo(x0, y0);
           this.ctx.lineTo(x1, y1);
-          this.ctx.lineWidth = (1.8 + v * 2.0) * this.thickness;
+          this.ctx.lineWidth = lw;
           this.ctx.stroke();
         }
       }
