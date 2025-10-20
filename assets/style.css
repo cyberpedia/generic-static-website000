@@ -409,10 +409,25 @@ canvas#viz {
   }
 }
 
-@media (max-width: 850px) {
+/* Tablet / small laptop adjustments */
+@media (max-width: 900px) {
   main {
     max-width: 98vw;
     padding: 1.2rem 1rem 1.3rem;
+  }
+  .controls {
+    grid-template-columns: repeat(4, auto);
+    row-gap: 0.6rem;
+  }
+  .slider-group {
+    grid-column: span 4;
+  }
+  .customize {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+  .customize .viz-tuning {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
   }
 }
 
