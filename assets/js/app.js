@@ -125,6 +125,7 @@ const App = (() => {
       state.viz.setTrailAlpha(Number(document.getElementById('viz-trail-alpha').value || 0.08));
       state.viz.setSpikeScale(Number(document.getElementById('viz-spike-scale').value || 1));
       state.viz.setWaveScale(Number(document.getElementById('viz-wave-scale').value || 1));
+      if (typeof state.viz.setSegments === 'function') state.viz.setSegments(Number(document.getElementById('viz-segments').value || 4));
       // beat tuning defaults
       if (typeof state.viz.setBeatSensitivity === 'function') state.viz.setBeatSensitivity(Number(document.getElementById('viz-beat-sense').value || 1));
       if (typeof state.viz.setBeatBoost === 'function') state.viz.setBeatBoost(Number(document.getElementById('viz-beat-boost').value || 1));
@@ -498,7 +499,7 @@ ${item.name}`);
     const SHOW = new Set();
     const ALL = [
       'viz-rot','viz-decay','viz-thickness','viz-ring-floor','viz-radial-floor',
-      'viz-glow-strength','viz-trail-alpha','viz-spike-scale','viz-wave-scale',
+      'viz-glow-strength','viz-trail-alpha','viz-spike-scale','viz-wave-scale','viz-segments',
       'viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay',
       'viz-beat-src','viz-beat-hold','viz-pulse-w',
       'viz-emphasis-mode','viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth'
@@ -524,13 +525,14 @@ ${item.name}`);
     } else if (s === 'radial') {
       show([
         'viz-rot','viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha',
+        'viz-segments',
         'viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay','viz-beat-src','viz-beat-hold','viz-pulse-w',
         'viz-emphasis-mode','viz-smooth'
       ]);
     } else if (s === 'particles') {
       show(['viz-thickness','viz-glow-strength','viz-trail-alpha','viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay','viz-beat-src','viz-beat-hold','viz-pulse-w','viz-smooth']);
     } else { // circle (default)
-      show(['viz-rot','viz-decay','viz-thickness','viz-ring-floor','viz-glow-strength','viz-spike-scale','viz-emphasis-mode','viz-smooth']);
+      show(['viz-rot','viz-decay','viz-thickness','viz-ring-floor','viz-glow-strength','viz-spike-scale','viz-segments','viz-emphasis-mode','viz-smooth']);
     }
 
     // Emphasis sliders only when mode = weighted and supported by style
@@ -951,6 +953,7 @@ ${item.name}`);
     const pulseW = document.getElementById('viz-pulse-w');
     const tplSel = document.getElementById('style-template');
     const emphMode = document.getElementById('viz-emphasis-mode');
+    const seg = document.getElementById('viz-segments');
 
     rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); logAction('viz.rot', { value: Number(e.target.value) }, 'viz-rot'); });
     dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); logAction('viz.decay', { value: Number(e.target.value) }, 'viz-decay'); });
@@ -961,6 +964,7 @@ ${item.name}`);
     ta.addEventListener('input', e => { if (state.viz) state.viz.setTrailAlpha(Number(e.target.value)); logAction('viz.trailAlpha', { value: Number(e.target.value) }, 'viz-trailAlpha'); });
     ss.addEventListener('input', e => { if (state.viz) state.viz.setSpikeScale(Number(e.target.value)); logAction('viz.spikeScale', { value: Number(e.target.value) }, 'viz-spikeScale'); });
     ws.addEventListener('input', e => { if (state.viz) state.viz.setWaveScale(Number(e.target.value)); logAction('viz.waveScale', { value: Number(e.target.value) }, 'viz-waveScale'); });
+    if (seg) seg.addEventListener('input', e => { if (state.viz && state.viz.setSegments) state.viz.setSegments(Number(e.target.value)); logAction('viz.segments', { value: Number(e.target.value) }, 'viz-segments'); });
     if (bs) bs.addEventListener('input', e => { if (state.viz && state.viz.setBeatSensitivity) state.viz.setBeatSensitivity(Number(e.target.value)); logAction('viz.beatSense', { value: Number(e.target.value) }, 'viz-beatSense'); });
     if (bb) bb.addEventListener('input', e => { if (state.viz && state.viz.setBeatBoost) state.viz.setBeatBoost(Number(e.target.value)); logAction('viz.beatBoost', { value: Number(e.target.value) }, 'viz-beatBoost'); });
     if (bt) bt.addEventListener('input', e => { if (state.viz && state.viz.setBeatThreshold) state.viz.setBeatThreshold(Number(e.target.value)); logAction('viz.beatThreshold', { value: Number(e.target.value) }, 'viz-beatThreshold'); });
