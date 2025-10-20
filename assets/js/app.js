@@ -161,6 +161,8 @@ const App = (() => {
 
     // show only relevant tuning controls for current style
     try { updateTuningVisibility(document.getElementById('viz-style').value); } catch (_) {}
+    // populate style templates for current style
+    try { populateStyleTemplates(document.getElementById('viz-style').value); } catch (_) {}
 
     // listen for viewport/orientation changes globally
     window.addEventListener('resize', reflowCanvas);
@@ -536,7 +538,138 @@ ${item.name}`);
     }
   }
 
-  function bindUI() {
+  // Built-in style templates (per visualizer style)
+  const STYLE_TEMPLATES = {
+    circle: [
+      { name: 'Circle Spikes', params: {
+        rot: 0.55, decay: 0.92, thickness: 1.2, ringFloor: 0.18, spikeScale: 1.2,
+        lowGain: 1.0, midGain: 1.0, highGain: 1.15, smoothing: 0.75
+      }},
+      { name: 'Circle Smooth', params: {
+        rot: 0.35, decay: 0.95, thickness: 1.4, ringFloor: 0.20, spikeScale: 0.95,
+        lowGain: 1.05, midGain: 1.0, highGain: 1.05, smoothing: 0.80
+      }}
+    ],
+    radial: [
+      { name: 'Radial Glow', params: {
+        rot: 0.7, decay: 0.92, thickness: 1.25, radialFloor: 0.18,
+        beatSense: 1.10, beatBoost: 1.20, beatThreshold: 0.08, beatDecay: 0.90,
+        beatSource: 'avg', beatHoldMs: 120, pulseWidth: 1.10,
+        lowGain: 1.1, midGain: 1.0, highGain: 1.1, smoothing: 0.75
+      }},
+      { name: 'Radial Punchy', params: {
+        rot: 0.85, decay: 0.90, thickness: 1.35, radialFloor: 0.16,
+        beatSense: 1.25, beatBoost: 1.30, beatThreshold: 0.10, beatDecay: 0.88,
+        beatSource: 'low', beatHoldMs: 150, pulseWidth: 1.2,
+        lowGain: 1.2, midGain: 0.95, highGain: 1.05, smoothing: 0.72
+      }}
+    ],
+    ring: [
+      { name: 'Ring Wave Smooth', params: {
+        rot: 0.40, thickness: 1.6, waveScale: 1.20, smoothing: 0.80
+      }},
+      { name: 'Ring Wave Punchy', params: {
+        rot: 0.65, thickness: 1.3, waveScale: 1.35, smoothing: 0.70
+      }}
+    ],
+    bars: [
+      { name: 'Bars EQ', params: {
+        decay: 0.92, thickness: 1.2, radialFloor: 0.14,
+        lowGain: 1.2, midGain: 1.0, highGain: 1.1, smoothing: 0.75
+      }},
+      { name: 'Bars Calm', params: {
+        decay: 0.95, thickness: 1.0, radialFloor: 0.16,
+        lowGain: 1.05, midGain: 1.0, highGain: 1.05, smoothing: 0.82
+      }}
+    ],
+    mirror: [
+      { name: 'Mirror EQ', params: {
+        decay: 0.92, thickness: 1.2, radialFloor: 0.14,
+        lowGain: 1.2, midGain: 1.0, highGain: 1.1, smoothing: 0.75
+      }},
+      { name: 'Mirror Calm', params: {
+        decay: 0.95, thickness: 1.0, radialFloor: 0.16,
+        lowGain: 1.05, midGain: 1.0, highGain: 1.05, smoothing: 0.82
+      }}
+    ],
+    particles: [
+      { name: 'Particles Orbit', params: {
+        thickness: 1.0,
+        beatSense: 1.0, beatBoost: 1.2, beatThreshold: 0.10, beatDecay: 0.90,
+        beatSource: 'avg', beatHoldMs: 140, pulseWidth: 1.2, smoothing: 0.75
+      }},
+      { name: 'Particles Spark', params: {
+        thickness: 1.1,
+        beatSense: 1.2, beatBoost: 1.3, beatThreshold: 0.12, beatDecay: 0.88,
+        beatSource: 'high', beatHoldMs: 160, pulseWidth: 1.3, smoothing: 0.72
+      }}
+    ]
+  };
+
+  function populateStyleTemplates(style) {
+    const sel = document.getElementById('style-template');
+    if (!sel) return;
+    const list = STYLE_TEMPLATES[String(style || '').toLowerCase()] || [];
+    sel.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = '— None —';
+    sel.appendChild(none);
+    for (const t of list) {
+      const opt = document.createElement('option');
+      opt.value = t.name;
+      opt.textContent = t.name;
+      sel.appendChild(opt);
+    }
+    sel.value = '';
+  }
+
+  function applyStyleTemplate(name) {
+    const style = document.getElementById('viz-style')?.value || 'bars';
+    const list = STYLE_TEMPLATES[String(style).toLowerCase()] || [];
+    const tpl = list.find(t => t.name === name);
+    if (!tpl) return;
+    const p = tpl.params || {};
+
+    // helper: set element and dispatch event to reuse existing handlers
+    function setInput(id, value, ev = 'input') {
+      const el = document.getElementById(id);
+      if (!el || typeof value === 'undefined') return;
+      el.value = String(value);
+      el.dispatchEvent(new Event(ev, { bubbles: true }));
+    }
+
+    // apply numeric/select params
+    setInput('viz-rot', p.rot);
+    setInput('viz-decay', p.decay);
+    setInput('viz-thickness', p.thickness);
+    setInput('viz-ring-floor', p.ringFloor);
+    setInput('viz-radial-floor', p.radialFloor);
+    setInput('viz-glow-strength', p.glowStrength);
+    setInput('viz-trail-alpha', p.trailAlpha);
+    setInput('viz-spike-scale', p.spikeScale);
+    setInput('viz-wave-scale', p.waveScale);
+    setInput('viz-beat-sense', p.beatSense);
+    setInput('viz-beat-boost', p.beatBoost);
+    setInput('viz-beat-thresh', p.beatThreshold);
+    setInput('viz-beat-decay', p.beatDecay);
+    setInput('viz-beat-hold', p.beatHoldMs);
+    setInput('viz-pulse-w', p.pulseWidth);
+    setInput('viz-low-gain', p.lowGain);
+    setInput('viz-mid-gain', p.midGain);
+    setInput('viz-high-gain', p.highGain);
+    setInput('viz-smooth', p.smoothing);
+
+    // beat source select uses change
+    if (typeof p.beatSource !== 'undefined') setInput('viz-beat-src', p.beatSource, 'change');
+
+    logAction('viz.template.apply', { style, name });
+    // ensure visibility after applying
+    try { updateTuningVisibility(style); } catch (_) {}
+  }
+
+  function bindUI() {indUI_code()new </{
+
     document.getElementById('play').addEventListener('click', async () => {
       ensureAudioContext();
       logAction('player.playButton');
@@ -705,8 +838,10 @@ ${item.name}`);
       const style = e.target.value;
       if (state.viz) state.viz.setStyle(style);
       try { updateTuningVisibility(style); } catch (_) {}
+      try { populateStyleTemplates(style); } catch (_) {}
       logAction('viz.style', { style });
-    });
+   _code }new)</;
+ });
     document.getElementById('viz-color-1').addEventListener('change', (e) => {
       if (state.viz) state.viz.setColors(e.target.value, document.getElementById('viz-color-2').value);
       logAction('viz.color1', { color: e.target.value });
@@ -782,7 +917,6 @@ ${item.name}`);
     const dec = document.getElementById('viz-decay');
     const th = document.getElementById('viz-thickness');
     const rf = document.getElementById('viz-ring-floor');
-    const rfRad = document.getElementById('viz-radial-floor');
     const gs = document.getElementById('viz-glow-strength');
     const ta = document.getElementById('viz-trail-alpha');
     const ss = document.getElementById('viz-spike-scale');
@@ -798,6 +932,7 @@ ${item.name}`);
     const srcSel = document.getElementById('viz-beat-src');
     const holdMs = document.getElementById('viz-beat-hold');
     const pulseW = document.getElementById('viz-pulse-w');
+    const tplSel = document.getElementById('style-template');
 
     rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); logAction('viz.rot', { value: Number(e.target.value) }, 'viz-rot'); });
     dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); logAction('viz.decay', { value: Number(e.target.value) }, 'viz-decay'); });
@@ -819,6 +954,14 @@ ${item.name}`);
     if (mg) mg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisMid', { value: Number(mg.value) }, 'viz-emphasisMid'); });
     if (hg) hg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisHigh', { value: Number(hg.value) }, 'viz-emphasisHigh'); });
     if (sm) sm.addEventListener('input', e => { if (state.viz && state.viz.setSmoothing) state.viz.setSmoothing(Number(e.target.value)); logAction('viz.smoothing', { value: Number(e.target.value) }, 'viz-smoothing'); });
+
+    if (tplSel) {
+      tplSel.addEventListener('change', (e) => {
+        const name = e.target.value;
+        if (!name) return;
+        applyStyleTemplate(name);
+      });
+    }
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
       const panel = document.getElementById('eq-panel');
