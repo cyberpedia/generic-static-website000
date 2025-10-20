@@ -61,18 +61,37 @@
     const copyBtn = document.createElement('button');
     copyBtn.textContent = 'Copy';
     copyBtn.style.padding = '4px 8px';
-    copyBtn.addEventListener('click', () => {
+    copyBtn.addEventListener('click', async () => {
       const txt = logs.join('\n');
-      navigator.clipboard.writeText(txt).catch(() => {
+
+      const fallbackCopy = () => {
         try {
           const ta = document.createElement('textarea');
           ta.value = txt;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
           document.body.appendChild(ta);
+          ta.focus();
           ta.select();
-          document.execCommand('copy');
+          const ok = document.execCommand && document.execCommand('copy');
           document.body.removeChild(ta);
-        } catch (_) {}
-      });
+          if (ok && window.Toast) Toast.show('Logs copied', 'success', 1500);
+        } catch (err) {
+          console.warn('Copy fallback failed', err);
+          if (window.Toast) Toast.show('Copy failed', 'error', 2000);
+        }
+      };
+
+      try {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          await navigator.clipboard.writeText(txt);
+          if (window.Toast) Toast.show('Logs copied', 'success', 1500);
+        } else {
+          fallbackCopy();
+        }
+      } catch (e) {
+        fallbackCopy();
+      }
     });
     controls.appendChild(copyBtn);
 
