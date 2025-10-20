@@ -103,6 +103,25 @@
               <label><input type="checkbox" id="viz-trail" checked/> Trail</label>
               <label><input type="checkbox" id="viz-art" checked/> Center Art</label>
             </div>
+
+            <div class="viz-mode">
+              <div class="orient">
+                <label>Orientation</label>
+                <select id="viz-orient">
+                  <option value="auto" selected>Auto</option>
+                  <option value="portrait">Portrait</option>
+                  <option value="landscape">Landscape</option>
+                </select>
+              </div>
+              <div class="theme">
+                <label>Theme</label>
+                <select id="theme-select">
+                  <option value="dark" selected>Dark</option>
+                  <option value="light">Light</option>
+                </select>
+              </div>
+            </div>
+
             <div class="viz-tuning">
               <label>Rotation <input type="range" id="viz-rot" min="0" max="3" step="0.01" value="0.6"></label>
               <label>Decay <input type="range" id="viz-decay" min="0.7" max="0.99" step="0.001" value="0.92"></label>
@@ -112,6 +131,8 @@
               <label>Trail Alpha <input type="range" id="viz-trail-alpha" min="0" max="0.3" step="0.01" value="0.08"></label>
               <label>Spike Scale <input type="range" id="viz-spike-scale" min="0.5" max="2" step="0.01" value="1"></label>
               <label>Wave Scale <input type="range" id="viz-wave-scale" min="0.5" max="2" step="0.01" value="1"></label>
+              <label>Beat Sensitivity <input type="range" id="viz-beat-sense" min="0.2" max="2" step="0.05" value="1"></label>
+              <label>Beat Boost <input type="range" id="viz-beat-boost" min="0" max="2" step="0.05" value="1"></label>
             </div>
             <div class="presets">
               <input type="text" id="preset-name" placeholder="Preset name"/>

@@ -25,6 +25,67 @@ body {
   overflow-y: auto;
 }
 
+/* Light theme overrides */
+body.light {
+  background: #f6f8ff;
+  color: #1d2433;
+}
+body.light header,
+body.light footer {
+  background: #ffffff;
+  color: #1d2433;
+  border-bottom: 1px solid #e6e9f2;
+}
+body.light .viz-layout {
+  background: #ffffff;
+  border-color: #e6e9f2;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+body.light .sidebar {
+  background: #ffffff;
+  border-color: #e6e9f2;
+  color: #1d2433;
+}
+body.light .library .toolbar:first-child {
+  background: #ffffff;
+  border-bottom-color: #e6e9f2;
+}
+body.light canvas#viz {
+  background: #ffffff;
+}
+body.light .eq-panel {
+  background: #ffffff;
+  border-color: #e6e9f2;
+  color: #1d2433;
+}
+body.light .panel {
+  background: #ffffff;
+  border-color: #e6e9f2;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+body.light .list li {
+  border-bottom-color: #e6e9f2;
+}
+body.light .list li:hover {
+  background: #f5f7fb;
+}
+body.light .list li.active {
+  background: #eef2ff;
+}
+body.light .customize .viz-tuning label {
+  background: #ffffff;
+  border-color: #e6e9f2;
+  color: #1d2433;
+}
+body.light .customize .viz-style select,
+body.light .customize .presets input[type="text"],
+body.light .customize .presets select,
+body.light .viz-mode select {
+  background: #ffffff;
+  border-color: #e6e9f2;
+  color: #1d2433;
+}
+
 header {
   background: #0d0f14;
   color: #fff;
@@ -432,6 +493,21 @@ canvas#viz {
   margin: 0.5rem 0;
   color: #e6e6e9;
 }
+
+/* orientation/theme row */
+.viz-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  align-items: center;
+}
+.viz-mode select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #3a4155;
+  background: #0f1322;
+  color: #e6e6e9;
+  border-radius: 8px;
+}
 .customize .viz-style select {
   padding: 0.3rem 0.5rem;
   border: 1px solid #3a4155;
@@ -573,11 +649,9 @@ canvas#viz {
 
 /* Responsive */
 @media (max-width: 1100px) {
+  /* legacy grid safe-guard: collapse any accidental grid usage */
   .app-grid {
-    grid-template-columns: 280px 1fr;
-  }
-  .playlists {
-    grid-column: span 2;
+    display 2;
   }
 }
 

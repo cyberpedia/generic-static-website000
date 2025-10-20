@@ -26,6 +26,9 @@ const App = (() => {
     inactiveAudio: null,
     activeGain: null,
     inactiveGain: null,
+    // UI mode
+    orientation: 'auto', // 'auto' | 'portrait' | 'landscape'
+    theme: 'dark'
     };
 
   async function init() {
@@ -119,39 +122,44 @@ const App = (() => {
       state.viz.setTrailAlpha(Number(document.getElementById('viz-trail-alpha').value || 0.08));
       state.viz.setSpikeScale(Number(document.getElementById('viz-spike-scale').value || 1));
       state.viz.setWaveScale(Number(document.getElementById('viz-wave-scale').value || 1));
+      // beat tuning defaults
+      if (typeof state.viz.setBeatSensitivity === 'function') state.viz.setBeatSensitivity(Number(document.getElementById('viz-beat-sense').value || 1));
+      if (typeof state.viz.setBeatBoost === 'function') state.viz.setBeatBoost(Number(document.getElementById('viz-beat-boost').value || 1));
     } catch (_) {}
     state.viz.start();
 
-    // Ensure canvas dynamically fits viewport/device orientation
-    function adjustCanvas() {
-      const canvas = document.getElementById('viz');
-      if (!canvas) return;
-      canvas.style.width = '100%';
-      canvas.style.maxWidth = '100%';
-      canvas.style.display = 'block';
-      const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-      const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-      // Prefer a fraction of viewport height; slightly larger in landscape
-      const isLandscape = vw > vh;
-      let targetH = isLandscape ? Math.round(Math.min(360, Math.max(140, vh * 0.55)))
-                                : Math.round(Math.min(360, Math.max(160, vh * 0.40)));
-      canvas.style.height = targetH + 'px';
-      try { state.viz && state.viz.resize(); } catch (_) {}
-    }
-    adjustCanvas();
-    window.addEventListener('resize', adjustCanvas);
+    // initial canvas reflow
+    reflowCanvas();
+
+    // listen for viewport/orientation changes globally
+    window.addEventListener('resize', reflowCanvas);
     try {
       if (window.screen && window.screen.orientation) {
-        window.screen.orientation.addEventListener('change', adjustCanvas);
+        window.screen.orientation.addEventListener('change', reflowCanvas);
       }
-    } catch (_) {}
-    try {
-      const ro = new ResizeObserver(() => adjustCanvas());
-      ro.observe(canvas.parentElement || canvas);
     } catch (_) {}
 
     // apply initial volume
     setVolume(Number(document.getElementById('volume').value || 0.9));
+  }
+
+  // Canvas reflow obeying orientation setting
+  function reflowCanvas() {
+    const canvas = document.getElementById('viz');
+    if (!canvas) return;
+    canvas.style.width = '100%';
+    canvas.style.maxWidth = '100%';
+    canvas.style.display = 'block';
+    const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+    const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+    let isLandscape;
+    if (state.orientation === 'landscape') isLandscape = true;
+    else if (state.orientation === 'portrait') isLandscape = false;
+    else isLandscape = vw > vh;
+    let targetH = isLandscape ? Math.round(Math.min(380, Math.max(140, vh * 0.55)))
+                              : Math.round(Math.min(380, Math.max(160, vh * 0.42)));
+    canvas.style.height = targetH + 'px';
+    try { state.viz && state.viz.resize(); } catch (_) {}
   }
 
   function setupAudioElements() {
@@ -621,6 +629,24 @@ ${item.name}`);
     if (trail) trail.addEventListener('change', () => { if (state.viz) state.viz.setTrail(trail.checked); logAction('viz.trail', { on: trail.checked }); });
     if (art) art.addEventListener('change', () => { if (state.viz) state.viz.setShowArt(art.checked); logAction('viz.art', { on: art.checked }); });
 
+    // orientation + theme
+    const orientSel = document.getElementById('viz-orient');
+    if (orientSel) {
+      orientSel.addEventListener('change', () => {
+        state.orientation = orientSel.value || 'auto';
+        reflowCanvas();
+        logAction('viz.orientation', { value: state.orientation });
+      });
+    }
+    const themeSel = document.getElementById('theme-select');
+    if (themeSel) {
+      themeSel.addEventListener('change', () => {
+        state.theme = themeSel.value || 'dark';
+        document.body.classList.toggle('light', state.theme === 'light');
+        logAction('theme.change', { value: state.theme });
+      });
+    }
+
     // tuning controls
     const rot = document.getElementById('viz-rot');
     const dec = document.getElementById('viz-decay');
@@ -630,6 +656,8 @@ ${item.name}`);
     const ta = document.getElementById('viz-trail-alpha');
     const ss = document.getElementById('viz-spike-scale');
     const ws = document.getElementById('viz-wave-scale');
+    const bs = document.getElementById('viz-beat-sense');
+    const bb = document.getElementById('viz-beat-boost');
 
     rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); logAction('viz.rot', { value: Number(e.target.value) }, 'viz-rot'); });
     dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); logAction('viz.decay', { value: Number(e.target.value) }, 'viz-decay'); });
@@ -639,6 +667,8 @@ ${item.name}`);
     ta.addEventListener('input', e => { if (state.viz) state.viz.setTrailAlpha(Number(e.target.value)); logAction('viz.trailAlpha', { value: Number(e.target.value) }, 'viz-trailAlpha'); });
     ss.addEventListener('input', e => { if (state.viz) state.viz.setSpikeScale(Number(e.target.value)); logAction('viz.spikeScale', { value: Number(e.target.value) }, 'viz-spikeScale'); });
     ws.addEventListener('input', e => { if (state.viz) state.viz.setWaveScale(Number(e.target.value)); logAction('viz.waveScale', { value: Number(e.target.value) }, 'viz-waveScale'); });
+    if (bs) bs.addEventListener('input', e => { if (state.viz && state.viz.setBeatSensitivity) state.viz.setBeatSensitivity(Number(e.target.value)); logAction('viz.beatSense', { value: Number(e.target.value) }, 'viz-beatSense'); });
+    if (bb) bb.addEventListener('input', e => { if (state.viz && state.viz.setBeatBoost) state.viz.setBeatBoost(Number(e.target.value)); logAction('viz.beatBoost', { value: Number(e.target.value) }, 'viz-beatBoost'); });
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
       const panel = document.getElementById('eq-panel');

@@ -23,6 +23,8 @@
       this.waveScale = 1.0;   // ring-wave amplitude multiplier
       this.ringFloor = 0.16;  // amplitude floor for circle visualization
       this.radialFloor = 0.16; // amplitude floor for radial bars
+      this.beatSense = 1.0;   // beat sensitivity multiplier
+      this.beatBoost = 1.0;   // beat pulse/particle boosting
 
       // motion and peak handling
       this.angle = 0;
@@ -120,6 +122,14 @@
 
     setRadialFloor(v) {
       this.radialFloor = Math.max(0, Math.min(0.4, Number(v) || 0.16));
+    }
+
+    setBeatSensitivity(v) {
+      this.beatSense = Math.max(0.2, Math.min(2.5, Number(v) || 1));
+    }
+
+    setBeatBoost(v) {
+      this.beatBoost = Math.max(0, Math.min(2.5, Number(v) || 1));
     }
 
     setAlbumArt(url) {
@@ -514,8 +524,9 @@
       for (let i = 0; i < binsHalf; i++) avg += (levelsL[i] + levelsR[i]) * 0.5;
       avg /= binsHalf;
 
-      // Beat ring pulse
-      const beatRadius = r + Math.pow(avg, 1.2) * (h / 16);
+      // Beat tuning: sensitivity and boost
+      const pulse = Math.pow(Math.max(0, avg * this.beatSense), 1.2) * this.beatBoost;
+      const beatRadius = r + pulse * (h / 16);
       this.ctx.save();
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, beatRadius, 0, Math.PI * 2);
@@ -674,7 +685,8 @@
       avg /= this.freqFloat.length;
 
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-      const spawn = Math.min(6, Math.floor(avg * 12));
+      const pulse = Math.max(0, avg * this.beatSense);
+      const spawn = Math.min(8, Math.floor(pulse * 12 * this.beatBoost));
       for (let s = 0; s < spawn; s++) {
         if (this.particles.length < this.maxParticles) {
           this.particles.push({
