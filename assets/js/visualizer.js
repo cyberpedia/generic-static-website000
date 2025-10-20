@@ -135,22 +135,39 @@ class Visualizer {
     }
     const gain = 1.0 / Math.max(0.35, peak + 0.05);
 
-    const levels = new Array(bins).fill(0);
+    const raw = new Array(bins).fill(0);
     for (let i = 0; i < bins; i++) {
       const idx = this.sampleIndex(i, bins, gamma);
-      // local smoothing
+      // local smoothing in frequency space
       let acc = 0, cnt = 0;
-      for (let j = -2; j <= 2; j++) {
+      for (let j = -3; j <= 3; j++) {
         const k = Math.max(0, Math.min(this.freqFloat.length - 1, idx + j));
         acc += this.norm(this.freqFloat[k]);
         cnt++;
       }
-      let v = (acc / cnt);
-      // minimum floor so high bins still visible
-      const floor = 0.08;
+      let v = acc / cnt;
+
+      // frequency emphasis so highs are visible around full ring
+      const t = i / (bins - 1);
+      const emphasis = 0.40 + 0.60 * Math.pow(t, 0.70); // boost high bins
+      v *= emphasis;
+
+      // minimum floor so no dead zones
+      const floor = 0.12;
       v = floor + v * (1 - floor);
-      levels[i] = Math.pow(v, 1.15) * gain;
+
+      raw[i] = Math.pow(v, 1.10) * gain;
     }
+
+    // angular smoothing to remove clumps (moving-average over neighbors)
+    const levels = new Array(bins).fill(0);
+    for (let i = 0; i < bins; i++) {
+      const i0 = (i - 1 + bins) % bins;
+      const i1 = i;
+      const i2 = (i + 1) % bins;
+      levels[i] = (raw[i0] + raw[i1] + raw[i2]) / 3;
+    }
+
     // peak-hold per bin
     if (!this.barPeaks || this.barPeaks.length !== bins) {
       this.barPeaks = new Float32Array(bins);
