@@ -182,6 +182,34 @@ class Visualizer {
     return { levels, peaks: this.barPeaks, gain };
   }
 
+  getTimeWave(bins) {
+    // normalized time-domain amplitude for full-circle presence
+    this.analyser.getByteTimeDomainData(this.timeData);
+    const wave = new Array(bins).fill(0);
+    const n = this.timeData.length;
+    for (let i = 0; i < bins; i++) {
+      const t = i / (bins - 1);
+      const idx = Math.floor(t * (n - 1));
+      // local smoothing
+      let acc = 0, cnt = 0;
+      for (let j = -3; j <= 3; j++) {
+        const k = Math.max(0, Math.min(n - 1, idx + j));
+        acc += Math.abs((this.timeData[k] - 128) / 128.0);
+        cnt++;
+      }
+      wave[i] = (acc / cnt) * 0.85 + 0.08; // add small floor
+    }
+    // angular smoothing
+    const sm = new Array(bins).fill(0);
+    for (let i = 0; i < bins; i++) {
+      const i0 = (i - 1 + bins) % bins;
+      const i1 = i;
+      const i2 = (i + 1) % bins;
+      sm[i] = (wave[i0] + wave[i1] + wave[i2]) / 3;
+    }
+    return sm;
+  }
+
   draw() {
     const { ctx, canvas } = this;
     const w = canvas.width / (window.devicePixelRatio || 1);
@@ -349,7 +377,8 @@ class Visualizer {
   drawCircle(w, h) {
     // crisp base ring + controlled amplitude spikes
     const bins = 180;
-    const { levels } = this.getSpectrum(bins, 1.0, 0.18);
+    const { levels } = this.getSpectrum(bins, 1.0, 0.16);
+    const wave = this.getTimeWave(bins); // ensures full-circle presence
 
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 
@@ -357,16 +386,16 @@ class Visualizer {
     this.ctx.save();
     this.ctx.beginPath();
     this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    this.ctx.lineWidth = 3.5;
+    this.ctx.lineWidth = 3.2;
     this.ctx.stroke();
     this.ctx.restore();
 
-    // amplitude spikes: moderate scale to prevent clumps
+    // amplitude spikes: combine spectrum and time-wave
     const spikeScale = Math.min(h / 4, r * 0.65);
     for (let i = 0; i < bins; i++) {
-      const angle = (i / bins) * Math.PI * 2 + this.angle * 0.25;
-      const v = levels[i];
-      const len = r + Math.pow(v, 1.12) * spikeScale;
+      const angle = (i / bins) * Math.PI * 2 + this.angle * 0.20;
+      const v = Math.min(1, levels[i] * 0.65 + wave[i] * 0.45);
+      const len = r + Math.pow(v, 1.10) * spikeScale;
       const x0 = cx + Math.cos(angle) * r;
       const y0 = cy + Math.sin(angle) * r;
       const x1 = cx + Math.cos(angle) * len;
@@ -375,7 +404,7 @@ class Visualizer {
       this.ctx.beginPath();
       this.ctx.moveTo(x0, y0);
       this.ctx.lineTo(x1, y1);
-      this.ctx.lineWidth = 1.9 + v * 2.1;
+      this.ctx.lineWidth = 1.8 + v * 2.0;
       this.ctx.stroke();
     }
   }
