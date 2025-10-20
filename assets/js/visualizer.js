@@ -357,6 +357,12 @@ class Visualizer {
     const w = canvas.width / (window.devicePixelRatio || 1);
     const h = canvas.height / (window.devicePixelRatio || 1);
 
+    // Guard against zero-size canvas (mobile layout changes)
+    if (w < 2 || h < 2) {
+      this.resize();
+      return;
+    }
+
     // trail effect for select styles; circle keeps a crisp ring
     const trailStyles = new Set(['radial', 'ring', 'particles', 'bars', 'mirror', 'wave']);
     if (this.trail && trailStyles.has(this.style)) {

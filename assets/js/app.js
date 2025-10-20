@@ -79,6 +79,14 @@ const App = (() => {
     const canvas = document.getElementById('viz');
     state.viz = new Visualizer(state.analyser, canvas);
     state.viz.setStereoAnalysers(state.analyserL, state.analyserR);
+    // apply current style and colors from UI
+    try {
+      state.viz.setStyle(document.getElementById('viz-style').value);
+      state.viz.setColors(
+        document.getElementById('viz-color-1').value,
+        document.getElementById('viz-color-2').value
+      );
+    } catch (_) {}
     // apply tuning defaults from UI
     try {
       state.viz.setRotationSpeed(Number(document.getElementById('viz-rot').value || 0.6));
