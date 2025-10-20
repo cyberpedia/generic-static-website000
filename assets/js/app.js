@@ -61,6 +61,19 @@ const App = (() => {
     setupAudioElements();
     const canvas = document.getElementById('viz');
     state.viz = new Visualizer(state.analyser, canvas);
+    // apply tuning defaults from UI
+    try {
+      state.viz.setRotationSpeed(Number(document.getElementById('viz-rot').value || 0.6));
+      state.viz.setDecay(Number(document.getElementById('viz-decay').value || 0.92));
+      state.viz.setThickness(Number(document.getElementById('viz-thickness').value || 1));
+      const floor = Number(document.getElementById('viz-ring-floor').value || 0.16);
+      state.viz.setRingFloor(floor);
+      state.viz.setRadialFloor(floor);
+      state.viz.setGlowStrength(Number(document.getElementById('viz-glow-strength').value || 12));
+      state.viz.setTrailAlpha(Number(document.getElementById('viz-trail-alpha').value || 0.08));
+      state.viz.setSpikeScale(Number(document.getElementById('viz-spike-scale').value || 1));
+      state.viz.setWaveScale(Number(document.getElementById('viz-wave-scale').value || 1));
+    } catch (_) {}
     state.viz.start();
 
     // apply initial volume
@@ -372,6 +385,25 @@ const App = (() => {
     if (glow) glow.addEventListener('change', () => state.viz.setGlow(glow.checked));
     if (trail) trail.addEventListener('change', () => state.viz.setTrail(trail.checked));
     if (art) art.addEventListener('change', () => state.viz.setShowArt(art.checked));
+
+    // tuning controls
+    const rot = document.getElementById('viz-rot');
+    const dec = document.getElementById('viz-decay');
+    const th = document.getElementById('viz-thickness');
+    const rf = document.getElementById('viz-ring-floor');
+    const gs = document.getElementById('viz-glow-strength');
+    const ta = document.getElementById('viz-trail-alpha');
+    const ss = document.getElementById('viz-spike-scale');
+    const ws = document.getElementById('viz-wave-scale');
+
+    rot.addEventListener('input', e => state.viz.setRotationSpeed(Number(e.target.value)));
+    dec.addEventListener('input', e => state.viz.setDecay(Number(e.target.value)));
+    th.addEventListener('input', e => state.viz.setThickness(Number(e.target.value)));
+    rf.addEventListener('input', e => { const v = Number(e.target.value); state.viz.setRingFloor(v); state.viz.setRadialFloor(v); });
+    gs.addEventListener('input', e => state.viz.setGlowStrength(Number(e.target.value)));
+    ta.addEventListener('input', e => state.viz.setTrailAlpha(Number(e.target.value)));
+    ss.addEventListener('input', e => state.viz.setSpikeScale(Number(e.target.value)));
+    ws.addEventListener('input', e => state.viz.setWaveScale(Number(e.target.value)));
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
       document.getElementById('eq-panel').classList.toggle('show');

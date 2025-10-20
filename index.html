@@ -97,6 +97,16 @@
             <label><input type="checkbox" id="viz-trail" checked/> Trail</label>
             <label><input type="checkbox" id="viz-art" checked/> Center Art</label>
           </div>
+          <div class="viz-tuning">
+            <label>Rotation <input type="range" id="viz-rot" min="0" max="3" step="0.01" value="0.6"></label>
+            <label>Decay <input type="range" id="viz-decay" min="0.7" max="0.99" step="0.001" value="0.92"></label>
+            <label>Thickness <input type="range" id="viz-thickness" min="0.5" max="3" step="0.01" value="1"></label>
+            <label>Ring Fill <input type="range" id="viz-ring-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
+            <label>Glow Strength <input type="range" id="viz-glow-strength" min="0" max="24" step="1" value="12"></label>
+            <label>Trail Alpha <input type="range" id="viz-trail-alpha" min="0" max="0.3" step="0.01" value="0.08"></label>
+            <label>Spike Scale <input type="range" id="viz-spike-scale" min="0.5" max="2" step="0.01" value="1"></label>
+            <label>Wave Scale <input type="range" id="viz-wave-scale" min="0.5" max="2" step="0.01" value="1"></label>
+          </div>
           <div class="presets">
             <input type="text" id="preset-name" placeholder="Preset name"/>
             <button id="save-viz-preset" class="btn">Save Viz Preset</button>

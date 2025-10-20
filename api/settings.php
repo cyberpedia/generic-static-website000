@@ -31,6 +31,18 @@ if (method_is('POST')) {
             'style' => sanitize_basename($preset['style'] ?? 'bars'),
             'color1' => (string)($preset['color1'] ?? '#19d3ae'),
             'color2' => (string)($preset['color2'] ?? '#1e90ff'),
+            'glow' => !!($preset['glow'] ?? true),
+            'trail' => !!($preset['trail'] ?? true),
+            'art' => !!($preset['art'] ?? true),
+            'rot' => (float)($preset['rot'] ?? 0.6),
+            'decay' => (float)($preset['decay'] ?? 0.92),
+            'thickness' => (float)($preset['thickness'] ?? 1.0),
+            'ringFloor' => (float)($preset['ringFloor'] ?? 0.16),
+            'radialFloor' => (float)($preset['radialFloor'] ?? 0.16),
+            'glowStrength' => (float)($preset['glowStrength'] ?? 12.0),
+            'trailAlpha' => (float)($preset['trailAlpha'] ?? 0.08),
+            'spikeScale' => (float)($preset['spikeScale'] ?? 1.0),
+            'waveScale' => (float)($preset['waveScale'] ?? 1.0),
         ];
         save_settings($data);
         send_json(['ok' => true]);

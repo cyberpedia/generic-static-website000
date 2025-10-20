@@ -11,6 +11,15 @@ class Visualizer {
     this.glow = true;
     this.trail = true;
     this.showArt = true;
+    this.glowStrength = 12;
+    this.trailAlpha = 0.08;
+
+    // tunable params
+    this.thickness = 1.0;   // global line thickness multiplier
+    this.spikeScale = 1.0;  // circle spike length multiplier
+    this.waveScale = 1.0;   // ring-wave amplitude multiplier
+    this.ringFloor = 0.16;  // amplitude floor for circle visualization
+    this.radialFloor = 0.16; // amplitude floor for radial bars
 
     // motion and peak handling
     this.angle = 0;
@@ -68,6 +77,39 @@ class Visualizer {
 
   setRotationSpeed(radPerSec) {
     this.rotation = Number(radPerSec) || this.rotation;
+  }
+
+  setGlowStrength(v) {
+    this.glowStrength = Math.max(0, Number(v) || 0);
+  }
+
+  setTrailAlpha(v) {
+    this.trailAlpha = Math.max(0, Math.min(0.5, Number(v) || 0));
+  }
+
+  setDecay(v) {
+    const d = Number(v);
+    if (d > 0 && d < 1) this.decay = d;
+  }
+
+  setThickness(v) {
+    this.thickness = Math.max(0.5, Math.min(4, Number(v) || 1));
+  }
+
+  setSpikeScale(v) {
+    this.spikeScale = Math.max(0.5, Math.min(2.5, Number(v) || 1));
+  }
+
+  setWaveScale(v) {
+    this.waveScale = Math.max(0.5, Math.min(2.5, Number(v) || 1));
+  }
+
+  setRingFloor(v) {
+    this.ringFloor = Math.max(0, Math.min(0.4, Number(v) || 0.16));
+  }
+
+  setRadialFloor(v) {
+    this.radialFloor = Math.max(0, Math.min(0.4, Number(v) || 0.16));
   }
 
   setAlbumArt(url) {
@@ -218,7 +260,7 @@ class Visualizer {
     // trail effect for select styles; circle keeps a crisp ring
     const trailStyles = new Set(['radial', 'ring', 'particles']);
     if (this.trail && trailStyles.has(this.style)) {
-      ctx.fillStyle = 'rgba(15,19,34,0.08)';
+      ctx.fillStyle = `rgba(15,19,34,${this.trailAlpha})`;
       ctx.fillRect(0, 0, w, h);
     } else {
       ctx.clearRect(0, 0, w, h);
@@ -229,7 +271,7 @@ class Visualizer {
 
     // glow
     ctx.shadowColor = this.glow ? this.color2 : 'transparent';
-    ctx.shadowBlur = this.glow ? 12 : 0;
+    ctx.shadowBlur = this.glow ? this.glowStrength : 0;
 
     const grad = API.gradient(ctx, this.color1, this.color2, w, h);
     ctx.fillStyle = grad;
@@ -281,7 +323,7 @@ class Visualizer {
     const bins = 240;
     const wave = this.getTimeWave(bins);
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-    const scale = Math.min(h / 5, r * 0.75);
+    const scale = Math.min(h / 5, r * 0.75) * this.waveScale;
 
     this.ctx.beginPath();
     for (let i = 0; i < bins; i++) {
@@ -293,7 +335,7 @@ class Visualizer {
       else this.ctx.lineTo(x, y);
     }
     this.ctx.closePath();
-    this.ctx.lineWidth = 2.6;
+    this.ctx.lineWidth = 2.6 * this.thickness;
     this.ctx.stroke();
   }
 
@@ -334,7 +376,7 @@ class Visualizer {
     this.angle += this.rotation * dt;
 
     const bins = 180; // enough bars to fill full circle
-    const { levels, peaks } = this.getSpectrum(bins, 1.0, 0.16);
+    const { levels, peaks } = this.getSpectrum(bins, 1.0, this.radialFloor);
 
     // avg for beat ring
     let avg = 0;
@@ -349,7 +391,7 @@ class Visualizer {
     this.ctx.beginPath();
     this.ctx.arc(cx, cy, beatRadius, 0, Math.PI * 2);
     this.ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    this.ctx.lineWidth = 2.5;
+    this.ctx.lineWidth = 2.5 * this.thickness;
     this.ctx.stroke();
     this.ctx.restore();
 
@@ -367,7 +409,7 @@ class Visualizer {
 
       const t = i / (bins - 1);
       this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
-      this.ctx.lineWidth = 2.2 + pv * 3.6;
+      this.ctx.lineWidth = (2.2 + pv * 3.6) * this.thickness;
 
       this.ctx.beginPath();
       this.ctx.moveTo(x0, y0);
@@ -376,7 +418,7 @@ class Visualizer {
 
       // cap dot
       this.ctx.beginPath();
-      this.ctx.arc(x1, y1, 2.0 + pv * 2.6, 0, Math.PI * 2);
+      this.ctx.arc(x1, y1, (2.0 + pv * 2.6) * this.thickness, 0, Math.PI * 2);
       this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
       this.ctx.fill();
     }
