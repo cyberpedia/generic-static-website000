@@ -74,8 +74,8 @@ function sanitize_relpath(string $path): string {
     // allow safe subdirectories: a-z, 0-9, / . _ -
     $path = str_replace('\\', '/', $path);
     $path = preg_replace('#[^A-Za-z0-9/._\\-]#', '_', $path);
-    // prevent traversal
-    while (str_contains($path, '../')) {
+    // prevent traversal (PHP 7 compatibility: no str_contains)
+    while (strpos($path, '../') !== false) {
         $path = str_replace('../', '', $path);
     }
     $path = ltrim($path, '/');
