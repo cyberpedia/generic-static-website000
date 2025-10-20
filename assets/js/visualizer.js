@@ -491,10 +491,7 @@
 
     drawRadialBars(w, h) {
       // frequency-domain radial bars with rotation and peak decay (stereo mirrored if available)
-    // rotation advanced in dr_code;
-      const dt = this.lastTS ? (now - this.lastTS) / 1000 : 0;
-      this.lastTS = now;
-      this.angle += this.rotation * dt;
+      // Rotation advanced globally in draw()
 
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 

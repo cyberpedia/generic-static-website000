@@ -142,8 +142,13 @@
     panel.appendChild(controls);
     panel.appendChild(pre);
     const anchor = document.getElementById('logger-anchor');
-    if (anchor) anchor.appendChild(panel);
-    else document.body.appendChild
+    if (anchor) {
+      anchor.appendChild(panel);
+    } else {
+      document.body.appendChild(panel);
+    }
+  }
+
   function init() {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', createPanel);
