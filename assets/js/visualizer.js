@@ -56,6 +56,8 @@
       this.lowGain = 1.0;
       this.midGain = 1.0;
       this.highGain = 1.0;
+      // emphasis mode: 'flat' (no weighting) | 'weighted'
+      this.emphasisMode = 'flat';
 
       // beat smoothing
       this.beatThreshold = 0.08;
@@ -199,6 +201,22 @@
       this.highGain = Math.max(0, Number(high) || 0);
     }
 
+    setEmphasisMode(mode) {
+      const m = String(mode || '').toLowerCase();
+      this.emphasisMode = m === 'weighted' ? 'weighted' : 'flat';
+    }
+
+    emphasisFactor(t) {
+      // t in [0..1] position along spectrum
+      if (this.emphasisMode !== 'weighted') return 1;
+      const lowW = 1 - t;
+      const midW = 1 - Math.abs(t - 0.5) * 2;
+      const highW = t;
+      const sumG = this.lowGain + this.midGain + this.highGain;
+      const mix = sumG > 0 ? ((this.lowGain * lowW) + (this.midGain * midW) + (this.highGain * highW)) / sumG : 1;
+      return 0.4 + 0.6 * mix;
+    }
+
     setSmoothing(v) {
       const s = Math.max(0.5, Math.min(0.95, Number(v) || 0.75));
       this.analyser.smoothingTimeConstant = s;
@@ -288,14 +306,9 @@
         }
         let v = acc / cnt;
 
-        // frequency emphasis controlled by low/mid/high gains
+        // frequency emphasis (flat by default for uniform heights)
         const t = i / (bins - 1);
-        const lowW = 1 - t;
-        const midW = 1 - Math.abs(t - 0.5) * 2;
-        const highW = t;
-        const sumG = this.lowGain + this.midGain + this.highGain;
-        const mix = sumG > 0 ? ((this.lowGain * lowW) + (this.midGain * midW) + (this.highGain * highW)) / sumG : 1;
-        const emphasis = 0.4 + 0.6 * mix;
+        const emphasis = this.emphasisFactor(t);
         v *= emphasis;
 
         // minimum floor so no dead zones
@@ -414,12 +427,7 @@
           }
           let v = acc / cnt;
           const t = i / (bins - 1);
-          const lowW = 1 - t;
-          const midW = 1 - Math.abs(t - 0.5) * 2;
-          const highW = t;
-          const sumG = this.lowGain + this.midGain + this.highGain;
-          const mix = sumG > 0 ? ((this.lowGain * lowW) + (this.midGain * midW) + (this.highGain * highW)) / sumG : 1;
-          const emphasis = 0.4 + 0.6 * mix;
+          const emphasis = this.emphasisFactor(t);
           v *= emphasis;
           const floor = floorOverride !== null ? floorOverride : 0.12;
           v = floor + v * (1 - floor);

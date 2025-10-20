@@ -102,6 +102,8 @@ const App = (() => {
     const canvas = document.getElementById('viz');
     state.viz = new Visualizer(state.analyser, canvas);
     state.viz.setStereoAnalysers(state.analyserL, state.analyserR);
+    // default to flat emphasis for uniform ring/spike heights without tuning
+    try { if (state.viz.setEmphasisMode) state.viz.setEmphasisMode('flat'); } catch (_) {}
     // apply current style and colors from UI
     try {
       state.viz.setStyle(document.getElementById('viz-style').value);
