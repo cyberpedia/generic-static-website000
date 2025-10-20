@@ -115,9 +115,10 @@ const App = (() => {
       state.viz.setRotationSpeed(Number(document.getElementById('viz-rot').value || 0.6));
       state.viz.setDecay(Number(document.getElementById('viz-decay').value || 0.92));
       state.viz.setThickness(Number(document.getElementById('viz-thickness').value || 1));
-      const floor = Number(document.getElementById('viz-ring-floor').value || 0.16);
-      state.viz.setRingFloor(floor);
-      state.viz.setRadialFloor(floor);
+      const ringFloor = Number(document.getElementById('viz-ring-floor').value || 0.16);
+      const radialFloor = Number(document.getElementById('viz-radial-floor').value || ringFloor);
+      state.viz.setRingFloor(ringFloor);
+      state.viz.setRadialFloor(radialFloor);
       state.viz.setGlowStrength(Number(document.getElementById('viz-glow-strength').value || 12));
       state.viz.setTrailAlpha(Number(document.getElementById('viz-trail-alpha').value || 0.08));
       state.viz.setSpikeScale(Number(document.getElementById('viz-spike-scale').value || 1));
@@ -157,6 +158,9 @@ const App = (() => {
 
     // initial canvas reflow
     reflowCanvas();
+
+    // show only relevant tuning controls for current style
+    try { updateTuningVisibility(document.getElementById('viz-style').value); } catch (_) {}
 
     // listen for viewport/orientation changes globally
     window.addEventListener('resize', reflowCanvas);
@@ -474,6 +478,64 @@ ${item.name}`);
     } catch (_) {}
   }
 
+  // Show/hide tuning controls per visualizer style to avoid confusion
+  function updateTuningVisibility(style) {
+    const s = (style || document.getElementById('viz-style')?.value || 'bars').toLowerCase();
+
+    const SHOW = new Set();
+    const ALL = [
+      'viz-rot','viz-decay','viz-thickness','viz-ring-floor','viz-radial-floor',
+      'viz-glow-strength','viz-trail-alpha','viz-spike-scale','viz-wave-scale',
+      'viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay',
+      'viz-beat-src','viz-beat-hold','viz-pulse-w',
+      'viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth'
+    ];
+
+    function show(ids) { ids.forEach(id => SHOW.add(id)); }
+    function setVisible(id, on) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const lab = el.closest('label') || el.parentElement;
+      if (lab) lab.style.display = on ? '' : 'none';
+    }
+
+    // Define per-style applicability
+    if (s === 'bars') {
+      show(['viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha','viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth']);
+    } else if (s === 'mirror') {
+      show(['viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha','viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth']);
+    } else if (s === 'wave') {
+      show(['viz-thickness','viz-wave-scale','viz-glow-strength','viz-trail-alpha','viz-smooth']);
+    } else if (s === 'ring') {
+      show(['viz-rot','viz-thickness','viz-wave-scale','viz-glow-strength','viz-trail-alpha','viz-smooth']);
+    } else if (s === 'radial') {
+      show([
+        'viz-rot','viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha',
+        'viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay','viz-beat-src','viz-beat-hold','viz-pulse-w',
+        'viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth'
+      ]);
+    } else if (s === 'particles') {
+      show(['viz-thickness','viz-glow-strength','viz-trail-alpha','viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay','viz-beat-src','viz-beat-hold','viz-pulse-w','viz-smooth']);
+    } else { // circle (default)
+      show(['viz-rot','viz-decay','viz-thickness','viz-ring-floor','viz-glow-strength','viz-spike-scale','viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth']);
+    }
+
+    // apply visibility
+    ALL.forEach(id => setVisible(id, SHOW.has(id)));
+
+    // Some checkboxes in viz-options could be style-specific: Trail not used for circle
+    const trail = document.getElementById('viz-trail');
+    if (trail) {
+      const lab = trail.closest('label') || trail.parentElement;
+      if (lab) lab.style.display = (s === 'circle') ? 'none' : '';
+    }
+    const bpmToggle = document.getElementById('viz-bpm');
+    if (bpmToggle) {
+      const lab = bpmToggle.closest('label') || bpmToggle.parentElement;
+      if (lab) lab.style.display = (s === 'radial' || s === 'particles') ? '' : 'none';
+    }
+  }
+
   function bindUI() {
     document.getElementById('play').addEventListener('click', async () => {
       ensureAudioContext();
@@ -640,8 +702,10 @@ ${item.name}`);
     });
 
     document.getElementById('viz-style').addEventListener('change', (e) => {
-      if (state.viz) state.viz.setStyle(e.target.value);
-      logAction('viz.style', { style: e.target.value });
+      const style = e.target.value;
+      if (state.viz) state.viz.setStyle(style);
+      try { updateTuningVisibility(style); } catch (_) {}
+      logAction('viz.style', { style });
     });
     document.getElementById('viz-color-1').addEventListener('change', (e) => {
       if (state.viz) state.viz.setColors(e.target.value, document.getElementById('viz-color-2').value);
@@ -718,6 +782,7 @@ ${item.name}`);
     const dec = document.getElementById('viz-decay');
     const th = document.getElementById('viz-thickness');
     const rf = document.getElementById('viz-ring-floor');
+    const rfRad = document.getElementById('viz-radial-floor');
     const gs = document.getElementById('viz-glow-strength');
     const ta = document.getElementById('viz-trail-alpha');
     const ss = document.getElementById('viz-spike-scale');
@@ -737,7 +802,8 @@ ${item.name}`);
     rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); logAction('viz.rot', { value: Number(e.target.value) }, 'viz-rot'); });
     dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); logAction('viz.decay', { value: Number(e.target.value) }, 'viz-decay'); });
     th.addEventListener('input', e => { if (state.viz) state.viz.setThickness(Number(e.target.value)); logAction('viz.thickness', { value: Number(e.target.value) }, 'viz-thickness'); });
-    rf.addEventListener('input', e => { if (state.viz) { const v = Number(e.target.value); state.viz.setRingFloor(v); state.viz.setRadialFloor(v); } logAction('viz.floor', { value: Number(e.target.value) }, 'viz-floor'); });
+    rf.addEventListener('input', e => { if (state.viz) { const v = Number(e.target.value); state.viz.setRingFloor(v); } logAction('viz.ringFloor', { value: Number(e.target.value) }, 'viz-ringFloor'); });
+    if (rfRad) rfRad.addEventListener('input', e => { if (state.viz) { const v = Number(e.target.value); state.viz.setRadialFloor(v); } logAction('viz.radialFloor', { value: Number(e.target.value) }, 'viz-radialFloor'); });
     gs.addEventListener('input', e => { if (state.viz) state.viz.setGlowStrength(Number(e.target.value)); logAction('viz.glowStrength', { value: Number(e.target.value) }, 'viz-glowStrength'); });
     ta.addEventListener('input', e => { if (state.viz) state.viz.setTrailAlpha(Number(e.target.value)); logAction('viz.trailAlpha', { value: Number(e.target.value) }, 'viz-trailAlpha'); });
     ss.addEventListener('input', e => { if (state.viz) state.viz.setSpikeScale(Number(e.target.value)); logAction('viz.spikeScale', { value: Number(e.target.value) }, 'viz-spikeScale'); });
