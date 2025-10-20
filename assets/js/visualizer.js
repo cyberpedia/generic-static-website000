@@ -34,9 +34,9 @@
       this.peaks = new Float32Array(this.analyser.frequencyBinCount);
       this.ampGain = 1;
 
-      // coverage multiplier around the circle (ensure full 360° even with few bins)
-      // Set to 1 to avoid duplicated arcs; we fill the circle by using more bins instead.
-      this.segments = 1;
+      // coverage multiplier around the circle (repeat pattern evenly around 360°)
+      // Using 4 segments by default so all sides pulse uniformly to the same spectrum pattern.
+      this.segments = 4;
 
       // particles
       this.particles = [];
@@ -698,29 +698,33 @@
       this.ctx.save();
       this.ctx.lineCap = 'round';
 
+      const segs = Math.max(1, this.segments | 0);
       for (let i = 0; i < bins; i++) {
         const v = peaks[i];
-        const ang = (i / bins) * Math.PI * 2 + this.angle;
-        const len = r + Math.pow(v, 1.2) * (h / 3);
-        const x0 = cx + Math.cos(ang) * r;
-        const y0 = cy + Math.sin(ang) * r;
-        const x1 = cx + Math.cos(ang) * len;
-        const y1 = cy + Math.sin(ang) * len;
+        for (let s = 0; s < segs; s++) {
+          const tIdx = (i + s * bins);
+          const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle;
+          const len = r + Math.pow(v, 1.2) * (h / 3) + pulse * (h / 8); // add global beat to all sides
+          const x0 = cx + Math.cos(ang) * r;
+          const y0 = cy + Math.sin(ang) * r;
+          const x1 = cx + Math.cos(ang) * len;
+          const y1 = cy + Math.sin(ang) * len;
 
-        const t = i / (bins - 1);
-        this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
-        this.ctx.lineWidth = (2.2 + v * 3.6) * this.thickness;
+          const t = i / (bins - 1);
+          this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
+          this.ctx.lineWidth = (2.2 + v * 3.6) * this.thickness;
 
-        this.ctx.beginPath();
-        this.ctx.moveTo(x0, y0);
-        this.ctx.lineTo(x1, y1);
-        this.ctx.stroke();
+          this.ctx.beginPath();
+          this.ctx.moveTo(x0, y0);
+          this.ctx.lineTo(x1, y1);
+          this.ctx.stroke();
 
-        // cap dot
-        this.ctx.beginPath();
-        this.ctx.arc(x1, y1, (2.0 + v * 2.6) * this.thickness, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        this.ctx.fill();
+          // cap dot
+          this.ctx.beginPath();
+          this.ctx.arc(x1, y1, (2.0 + v * 2.6) * this.thickness, 0, Math.PI * 2);
+          this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          this.ctx.fill();
+        }
       }
 
       this.ctx.restore();
@@ -756,20 +760,25 @@
       const { peaks } = this.getSpectrum(bins, 1.0, this.ringFloor);
       const spikeScale = Math.min(h / 4, r * 0.65) * this.spikeScale;
 
+      const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
+      const segs = Math.max(1, this.segments | 0);
       for (let i = 0; i < bins; i++) {
         const v = peaks[i];
-        const ang = (i / bins) * Math.PI * 2 + this.angle;
-        const len = r + Math.pow(v, 1.10) * spikeScale;
-        const x0 = cx + Math.cos(ang) * r;
-        const y0 = cy + Math.sin(ang) * r;
-        const x1 = cx + Math.cos(ang) * len;
-        const y1 = cy + Math.sin(ang) * len;
+        for (let s = 0; s < segs; s++) {
+          const tIdx = (i + s * bins);
+          const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle;
+          const len = r + Math.pow(v, 1.10) * spikeScale + pulse * (h / 10); // add global beat to spike length
+          const x0 = cx + Math.cos(ang) * r;
+          const y0 = cy + Math.sin(ang) * r;
+          const x1 = cx + Math.cos(ang) * len;
+          const y1 = cy + Math.sin(ang) * len;
 
-        this.ctx.beginPath();
-        this.ctx.moveTo(x0, y0);
-        this.ctx.lineTo(x1, y1);
-        this.ctx.lineWidth = (1.8 + v * 2.0) * this.thickness;
-        this.ctx.stroke();
+          this.ctx.beginPath();
+          this.ctx.moveTo(x0, y0);
+          this.ctx.lineTo(x1, y1);
+          this.ctx.lineWidth = (1.8 + v * 2.0) * this.thickness;
+          this.ctx.stroke();
+        }
       }
 
       // progress arc overlay (12 o'clock start, clockwise)
