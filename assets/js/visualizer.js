@@ -257,63 +257,73 @@ class Visualizer {
   }
 
   drawWave(w, h) {
-    this.analyser.getByteTimeDomainData(this.timeData);
+    const bins = 256;
+    const wave = this.getTimeWave(bins);
     this.ctx.beginPath();
-    for (let i = 0; i < this.timeData.length; i++) {
-      const x = (i / (this.timeData.length - 1)) * w;
-      const v = (this.timeData[i] - 128) / 128.0;
+    for (let i = 0; i < bins; i++) {
+      const x = (i / (bins - 1)) * w;
+      const v = (wave[i] - 0.08) / 0.92; // re-center around 0
       const y = h / 2 + v * (h / 2) * 0.9;
       if (i === 0) this.ctx.moveTo(x, y);
       else this.ctx.lineTo(x, y);
     }
+    this.ctx.lineWidth = 2.0;
     this.ctx.stroke();
   }
 
   drawRingWave(w, h) {
-    // time-domain continuous ring wave
+    // smoothed time-domain ring wave
     const now = performance.now();
     const dt = this.lastTS ? (now - this.lastTS) / 1000 : 0;
     this.lastTS = now;
     this.angle += this.rotation * dt;
 
-    this.analyser.getByteTimeDomainData(this.timeData);
+    const bins = 240;
+    const wave = this.getTimeWave(bins);
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-    const n = this.timeData.length;
+    const scale = Math.min(h / 5, r * 0.75);
 
     this.ctx.beginPath();
-    for (let i = 0; i < n; i++) {
-      const ang = (i / n) * Math.PI * 2 + this.angle;
-      const v = (this.timeData[i] - 128) / 128.0;
-      const len = r + v * (h / 4);
+    for (let i = 0; i < bins; i++) {
+      const ang = (i / bins) * Math.PI * 2 + this.angle;
+      const len = r + wave[i] * scale;
       const x = cx + Math.cos(ang) * len;
       const y = cy + Math.sin(ang) * len;
       if (i === 0) this.ctx.moveTo(x, y);
       else this.ctx.lineTo(x, y);
     }
     this.ctx.closePath();
+    this.ctx.lineWidth = 2.6;
     this.ctx.stroke();
   }
 
   drawMirrorBars(w, h) {
-    // vertical bars mirrored top/bottom
-    this.analyser.getFloatFrequencyData(this.freqFloat);
-    let peak = 0;
-    for (let i = 0; i < this.freqFloat.length; i++) peak = Math.max(peak, this.norm(this.freqFloat[i]));
-    const gain = 1.0 / Math.max(0.35, peak + 0.05);
-
-    const bins = 64;
+    // vertical bars mirrored top/bottom with smoothed spectrum
+    const bins = 100;
+    const { peaks } = this.getSpectrum(bins, 1.0, 0.14);
     const bw = w / bins;
+
+    this.ctx.save();
+    this.ctx.lineCap = 'round';
+
     for (let i = 0; i < bins; i++) {
-      const idx = this.sampleIndex(i, bins, 2.0);
-      const v = this.norm(this.freqFloat[idx]);
-      const bh = Math.pow(v, 1.2) * (h / 2) * gain;
+      const v = peaks[i];
+      const bh = v * (h / 2);
+      const x = i * bw + 2;
+
+      // gradient color along x
+      const t = i / (bins - 1);
+      this.ctx.fillStyle = lerpColor(this.color1, this.color2, t);
+
       // bottom bars
-      ctxRoundRect(this.ctx, i * bw + 2, h - bh, bw - 4, bh, 4);
+      ctxRoundRect(this.ctx, x, h - bh, bw - 4, bh, 4);
       this.ctx.fill();
       // top bars mirrored
-      ctxRoundRect(this.ctx, i * bw + 2, 0, bw - 4, bh, 4);
+      ctxRoundRect(this.ctx, x, 0, bw - 4, bh, 4);
       this.ctx.fill();
     }
+
+    this.ctx.restore();
   }
 
   drawRadialBars(w, h) {
