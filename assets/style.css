@@ -200,12 +200,22 @@ footer {
   flex-direction:
 /* Visualizer layout card wraps canvas + controls + tuning + EQ + logger */
 .viz-layout {
-  background: #0f1322;
+  background: #12151d;
   border: 1px solid #1c2236;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  border-radius: 14px;
+  padding: clamp(10px, 2.2vw, 18px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  max-width: clamp(320px, 92vw, 900px);
+  margin: 0 auto; /* center the panel */
 }
+.viz-title {
+  font-size: clamp(1.6rem, 5.4vw, 2.6rem);
+  color: #f2f5ff;
+  margin: 0 0 0.8rem 0;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .viz-layout .eq-header span,
 .viz-layout label {
   color: #c9d7ff;
@@ -213,6 +223,24 @@ footer {
 .viz-layout .eq-panel {
   background: #101528;
   border-color: #1c2236;
+}
+
+/* Logger styling inside viz-layout */
+.viz-layout #debug-panel {
+  position: static !important;
+  width: 100% !important;
+  max-height: 28vh;
+  background: #0f1322;
+  color: #e6e6e9;
+  border: 1px solid #1c2236;
+  border-radius: 12px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+}
+.viz-layout #debug-panel pre {
+  background: #0c111d;
+  border-top: 1px solid #1c2236;
 }
 
 .art-and-info {
