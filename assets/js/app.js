@@ -112,6 +112,34 @@ const App = (() => {
     } catch (_) {}
     state.viz.start();
 
+    // Ensure canvas dynamically fits viewport/device orientation
+    function adjustCanvas() {
+      const canvas = document.getElementById('viz');
+      if (!canvas) return;
+      canvas.style.width = '100%';
+      canvas.style.maxWidth = '100%';
+      canvas.style.display = 'block';
+      const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+      const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+      // Prefer a fraction of viewport height; slightly larger in landscape
+      const isLandscape = vw > vh;
+      let targetH = isLandscape ? Math.round(Math.min(360, Math.max(140, vh * 0.55)))
+                                : Math.round(Math.min(360, Math.max(160, vh * 0.40)));
+      canvas.style.height = targetH + 'px';
+      try { state.viz && state.viz.resize(); } catch (_) {}
+    }
+    adjustCanvas();
+    window.addEventListener('resize', adjustCanvas);
+    try {
+      if (window.screen && window.screen.orientation) {
+        window.screen.orientation.addEventListener('change', adjustCanvas);
+      }
+    } catch (_) {}
+    try {
+      const ro = new ResizeObserver(() => adjustCanvas());
+      ro.observe(canvas.parentElement || canvas);
+    } catch (_) {}
+
     // apply initial volume
     setVolume(Number(document.getElementById('volume').value || 0.9));
   }

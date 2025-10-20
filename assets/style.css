@@ -218,10 +218,24 @@ footer {
 
 canvas#viz {
   width: 100%;
-  height: 300px;
+  max-width: 100%;
+  display: block;
+  height: clamp(180px, 40vh, 360px);
   background: #0f1322;
   border-radius: 12px;
   margin: 0.6rem 0 0.8rem 0;
+}
+
+@media (max-width: 600px) {
+  canvas#viz {
+    height: clamp(160px, 45vh, 340px);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  canvas#viz {
+    height: clamp(140px, 55vh, 320px);
+  }
 }
 
 /* Controls */
