@@ -1,10 +1,14 @@
 const API = (() => {
   const state = { csrf: null, allowed: [], uploadMax: null };
 
-  // Build URL under current directory (supports subfolders like /Djweb-main/)
+  // Build URL under current directory (supports subfolders like /Djweb-main/ or /Djweb-main)
   const basePath = (() => {
-    const p = window.location.pathname;
+    const p = window.location.pathname || '/';
     if (p.endsWith('/')) return p;
+    const lastSeg = p.substring(p.lastIndexOf('/') + 1);
+    // If last segment has no dot, treat as folder path missing trailing slash
+    if (lastSeg && !lastSeg.includes('.')) return p + '/';
+    // Else treat as file path and return its directory
     const i = p.lastIndexOf('/');
     return i >= 0 ? p.slice(0, i + 1) : '/';
   })();

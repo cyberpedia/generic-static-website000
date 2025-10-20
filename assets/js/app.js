@@ -397,6 +397,8 @@ ${item.name}`);
           notify(res.error || 'Import failed', 'error');
         } else {
           notify('Imported audio from URL', 'success');
+          // Force server-side rescan to update index
+          try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
         }
         await loadLibrary(true);
       });
@@ -411,6 +413,7 @@ ${item.name}`);
           notify(res.error || 'Import failed', 'error');
         } else {
           notify('Imported audio from URL', 'success');
+          try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
         }
         await loadLibrary(true);
       });
@@ -434,6 +437,9 @@ ${item.name}`);
           try { if (window.BUG) BUG.error('upload.error', err); } catch (_) {}
         }
       }
+      // Force server-side rescan to update index
+      try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
+
       await loadLibrary(true);
       if (okCount > 0) notify(`Uploaded ${okCount} file(s)`, 'success');
       if (errCount > 0) notify(`${errCount} upload(s) failed`, 'error');
