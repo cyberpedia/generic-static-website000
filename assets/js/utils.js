@@ -42,7 +42,7 @@ const API = (() => {
   }
 
   async function get(path, params = {}) {
-    const url = buildURL(path, params);
+    const url = buildURL(path, { ...params, _ts: Date.now() });
     const res = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
     const ct = res.headers.get('content-type') || '';
     if (ct.includes('application/json')) return res.json();

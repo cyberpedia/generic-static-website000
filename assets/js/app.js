@@ -190,57 +190,23 @@ const App = (() => {
       delBtn.title = 'Delete this track';
       delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const ok = window.confirm(`Delete track?\n${item.name}`);
+        const ok = window.confirm(`Delete track?
+${item.name}`);
         if (!ok) return;
         try {
-          const res =  }
-
-  function filterLibrary(query) {
-    const q = (query || '').toLowerCase();
-    if (!q) return renderLibrary();
-    const list = state.library.filter(it => (it.name || '').toLowerCase().includes(q));
-    renderLibrary(list);
-  }
-
-  function playIndex(i) {
-    try { if (window.BUG) BUG.log('playIndex', i); } catch (_) {}
-    if (i < 0 || i >= state.library.length) return;
-    const track = state.library[i];
-    state.currentIndex = i;
-    playTrack(track);
-  }
-
-  function playTrack(track) {
-    ensureAudioContext();
-    try { if (window.BUG) BUG.log('playTrack', track); } catch (_) {}
-
-    const src = API.resource('assets/music/' + (track.path || ''));
-
-    // Update UI info
-    document.getElementById('track-title').textContent = track.name || track.path;
-    state.currentTrack = { path: track.path, name: track.name };
-
-    const useA = state.useA;
-
-    const incoming = useA ? state.audioB : state.audioA;
-    const outgoing = useA ? state.audioA : state.audioB;
-    const incomingGain = useA ? state.gainB : state.gainA;
-    const outgoingGain = useA ? state.gainA : state.gainB;
-
-    if (!incoming || !outgoing) return;
-
-    // stop outgoing to avoid play() interrupted by pause()
-    try { outgoing.pause(); } catch (_) {}
-    incoming.pause();
-    incoming.src = src;
-    incoming.currentTime = 0;
-    incoming.playbackRate = Number(document.getElementById('rate').value || 1);
-    incoming.volume = Number(document.getElementById('volume').value || 0.9);
-
-    // resume AudioContext if needed (autoplay policy)
-    try {
-      if (state.ctx && state.ctx.state === 'suspended') {
-        state.ctx.resume().catch(() => {});
+          const res = await API.post('api/delete.php', { path: item.path });
+          if (res.ok) {
+            try { if (window.BUG) BUG.log('deleteTrack:list', item.path); } catch (_) {}
+            notify(`Deleted ${item.name}`, 'success');
+            await loadLibrary(true);
+          } else {
+            notify(res.error || 'Delete failed', 'error');
+          }
+        } catch (err) {
+          console.error('Delete error', err);
+          notify('Delete failed: ' + err.message, 'error');
+        }
+      });
       }
     } catch (_) {}
 
@@ -414,6 +380,7 @@ const App = (() => {
 
     document.getElementById('rescan').addEventListener('click', async () => {
       await loadLibrary(true);
+      notify('Library refreshed', 'success', 2500);
     });
 
     document.getElementById('search').addEventListener('input', (e) => {
@@ -426,7 +393,11 @@ const App = (() => {
         const url = (document.getElementById('import-url').value || '').trim();
         if (!url) return;
         const res = await API.post('api/remote_import.php', { url });
-        if (!res.ok) alert(res.error || 'Import failed');
+        if (!res.ok) {
+          notify(res.error || 'Import failed', 'error');
+        } else {
+          notify('Imported audio from URL', 'success');
+        }
         await loadLibrary(true);
       });
     }
@@ -436,7 +407,11 @@ const App = (() => {
         const url = (document.getElementById('import-url-mobile').value || '').trim();
         if (!url) return;
         const res = await API.post('api/remote_import.php', { url });
-        if (!res.ok) alert(res.error || 'Import failed');
+        if (!res.ok) {
+          notify(res.error || 'Import failed', 'error');
+        } else {
+          notify('Imported audio from URL', 'success');
+        }
         await loadLibrary(true);
       });
     }
@@ -445,21 +420,23 @@ const App = (() => {
     up.addEventListener('change', async () => {
       const files = Array.from(up.files || []);
       try { if (window.BUG) BUG.log('upload.files', files.map(f => ({ name: f.name, size: f.size }))); } catch (_) {}
+      let okCount = 0, errCount = 0;
       for (const f of files) {
         try {
           const res = await API.upload('api/upload.php', f);
           try { if (window.BUG) BUG.log('upload.result', res); } catch (_) {}
-          if (!res.ok) alert(res.error || 'Upload failed');
+          if (res.ok) okCount++;
+          else { errCount++; notify(res.error || `Upload failed: ${f.name}`, 'error'); }
         } catch (err) {
           console.error('Upload failed', err);
+          errCount++;
+          notify(`Upload failed: ${f.name}`, 'error');
           try { if (window.BUG) BUG.error('upload.error', err); } catch (_) {}
         }
       }
       await loadLibrary(true);
-      // auto-play the last track after upload
-      if (state.library.length > 0) {
-        playIndex(state.library.length - 1);
-      }
+      if (okCount > 0) notify(`Uploaded ${okCount} file(s)`, 'success');
+      if (errCount > 0) notify(`${errCount} upload(s) failed`, 'error');
       up.value = '';
     });
     const upMobile = document.getElementById('upload-input-mobile');
@@ -531,7 +508,8 @@ const App = (() => {
     if (delBtn) {
       delBtn.addEventListener('click', async () => {
         if (!state.currentTrack || !state.currentTrack.path) return;
-        const ok = window.confirm(`Delete current track?\n${state.currentTrack.name || state.currentTrack.path}`);
+        const ok = window.confirm(`Delete current track?
+${state.currentTrack.name || state.currentTrack.path}`);
         if (!ok) return;
         try {
           const res = await API.post('api/delete.php', { path: state.currentTrack.path });
@@ -541,17 +519,18 @@ const App = (() => {
             try { state.audioA.pause(); state.audioA.src = ''; } catch (_) {}
             try { state.audioB.pause(); state.audioB.src = ''; } catch (_) {}
             document.getElementById('art').style.backgroundImage = '';
+            notify('Track deleted', 'success');
             state.currentTrack = null;
             document.getElementById('track-title').textContent = '—';
             document.getElementById('track-time').textContent = '0:00 / 0:00';
             document.getElementById('play').textContent = 'Play';
             await loadLibrary(true);
           } else {
-            alert(res.error || 'Delete failed');
+            notify(res.error || 'Delete failed', 'error');
           }
         } catch (err) {
           console.error('Delete error', err);
-          alert('Delete failed: ' + err.message);
+          notify('Delete failed: ' + err.message, 'error');
         }
       });
     }
@@ -571,6 +550,7 @@ const App = (() => {
       state.recorder.stop();
       state.recorder = null;
       document.getElementById('record').textContent = 'Record';
+      notify('Recording saved (WebM downloaded)', 'success', 2500);
       return;
     }
     const canvas = document.getElementById('viz');
@@ -595,6 +575,7 @@ const App = (() => {
     rec.start();
     state.recorder = rec;
     document.getElementById('record').textContent = 'Stop';
+    notify('Recording started', 'info', 1800);
   }
 
   function arrayBufferToBase64(buffer) {
@@ -617,6 +598,14 @@ const App = (() => {
 
   function getCurrentTrack() {
     return state.currentTrack;
+  }
+
+  function notify(msg, type = 'info', timeout = 3000) {
+    if (typeof Toast !== 'undefined') {
+      Toast.show(String(msg), type, timeout);
+    } else {
+      console.log(`[toast:${type}]`, msg);
+    }
   }
 
   return { init, playTrack, state, getCurrentTrack, loadLibrary };
