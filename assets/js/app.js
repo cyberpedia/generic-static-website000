@@ -678,7 +678,7 @@ ${item.name}`);
     try { updateTuningVisibility(style); } catch (_) {}
   }
 
-  function bindUI() {indUI_code()new </{
+  function bindUI() {
 
     document.getElementById('play').addEventListener('click', async () => {
       ensureAudioContext();
@@ -850,8 +850,7 @@ ${item.name}`);
       try { updateTuningVisibility(style); } catch (_) {}
       try { populateStyleTemplates(style); } catch (_) {}
       logAction('viz.style', { style });
-   _code }new)</;
- });
+    });
     document.getElementById('viz-color-1').addEventListener('change', (e) => {
       if (state.viz) state.viz.setColors(e.target.value, document.getElementById('viz-color-2').value);
       logAction('viz.color1', { color: e.target.value });
@@ -927,6 +926,7 @@ ${item.name}`);
     const dec = document.getElementById('viz-decay');
     const th = document.getElementById('viz-thickness');
     const rf = document.getElementById('viz-ring-floor');
+    const rfRad = document.getElementById('viz-radial-floor');
     const gs = document.getElementById('viz-glow-strength');
     const ta = document.getElementById('viz-trail-alpha');
     const ss = document.getElementById('viz-spike-scale');
@@ -943,6 +943,7 @@ ${item.name}`);
     const holdMs = document.getElementById('viz-beat-hold');
     const pulseW = document.getElementById('viz-pulse-w');
     const tplSel = document.getElementById('style-template');
+    const emphMode = document.getElementById('viz-emphasis-mode');
 
     rot.addEventListener('input', e => { if (state.viz) state.viz.setRotationSpeed(Number(e.target.value)); logAction('viz.rot', { value: Number(e.target.value) }, 'viz-rot'); });
     dec.addEventListener('input', e => { if (state.viz) state.viz.setDecay(Number(e.target.value)); logAction('viz.decay', { value: Number(e.target.value) }, 'viz-decay'); });

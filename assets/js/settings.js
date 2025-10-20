@@ -159,6 +159,7 @@
         document.getElementById('viz-decay').value = p.decay ?? 0.92;
         document.getElementById('viz-thickness').value = p.thickness ?? 1;
         document.getElementById('viz-ring-floor').value = p.ringFloor ?? 0.16;
+        document.getElementById('viz-radial-floor').value = p.radialFloor ?? (p.ringFloor ?? 0.16);
         document.getElementById('viz-glow-strength').value = p.glowStrength ?? 12;
         document.getElementById('viz-trail-alpha').value = p.trailAlpha ?? 0.08;
         document.getElementById('viz-spike-scale').value = p.spikeScale ?? 1;
