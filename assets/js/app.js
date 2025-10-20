@@ -141,6 +141,7 @@ const App = (() => {
         Number(document.getElementById('viz-mid-gain').value || 1),
         Number(document.getElementById('viz-high-gain').value || 1)
       );
+      if (typeof state.viz.setEmphasisMode === 'function') state.viz.setEmphasisMode((document.getElementById('viz-emphasis-mode')?.value) || 'flat');
       if (typeof state.viz.setSmoothing === 'function') state.viz.setSmoothing(Number(document.getElementById('viz-smooth').value || 0.75));
       if (typeof state.viz.setPerformanceMode === 'function') {
         const perfOn = !!document.getElementById('viz-perf')?.checked;
@@ -485,6 +486,7 @@ ${item.name}`);
   // Show/hide tuning controls per visualizer style to avoid confusion
   function updateTuningVisibility(style) {
     const s = (style || document.getElementById('viz-style')?.value || 'bars').toLowerCase();
+    const mode = (document.getElementById('viz-emphasis-mode')?.value || 'flat').toLowerCase();
 
     const SHOW = new Set();
     const ALL = [
@@ -492,7 +494,7 @@ ${item.name}`);
       'viz-glow-strength','viz-trail-alpha','viz-spike-scale','viz-wave-scale',
       'viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay',
       'viz-beat-src','viz-beat-hold','viz-pulse-w',
-      'viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth'
+      'viz-emphasis-mode','viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth'
     ];
 
     function show(ids) { ids.forEach(id => SHOW.add(id)); }
@@ -503,11 +505,11 @@ ${item.name}`);
       if (lab) lab.style.display = on ? '' : 'none';
     }
 
-    // Define per-style applicability
+    // Define per-style applicability (baseline)
     if (s === 'bars') {
-      show(['viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha','viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth']);
+      show(['viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha','viz-emphasis-mode','viz-smooth']);
     } else if (s === 'mirror') {
-      show(['viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha','viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth']);
+      show(['viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha','viz-emphasis-mode','viz-smooth']);
     } else if (s === 'wave') {
       show(['viz-thickness','viz-wave-scale','viz-glow-strength','viz-trail-alpha','viz-smooth']);
     } else if (s === 'ring') {
@@ -516,12 +518,18 @@ ${item.name}`);
       show([
         'viz-rot','viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha',
         'viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay','viz-beat-src','viz-beat-hold','viz-pulse-w',
-        'viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth'
+        'viz-emphasis-mode','viz-smooth'
       ]);
     } else if (s === 'particles') {
       show(['viz-thickness','viz-glow-strength','viz-trail-alpha','viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay','viz-beat-src','viz-beat-hold','viz-pulse-w','viz-smooth']);
     } else { // circle (default)
-      show(['viz-rot','viz-decay','viz-thickness','viz-ring-floor','viz-glow-strength','viz-spike-scale','viz-low-gain','viz-mid-gain','viz-high-gain','viz-smooth']);
+      show(['viz-rot','viz-decay','viz-thickness','viz-ring-floor','viz-glow-strength','viz-spike-scale','viz-emphasis-mode','viz-smooth']);
+    }
+
+    // Emphasis sliders only when mode = weighted and supported by style
+    const emphasisSupported = (s === 'bars' || s === 'mirror' || s === 'radial' || s === 'circle');
+    if (emphasisSupported && mode === 'weighted') {
+      show(['viz-low-gain','viz-mid-gain','viz-high-gain']);
     }
 
     // apply visibility
@@ -956,6 +964,13 @@ ${item.name}`);
     if (mg) mg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisMid', { value: Number(mg.value) }, 'viz-emphasisMid'); });
     if (hg) hg.addEventListener('input', () => { if (state.viz && state.viz.setEmphasis) state.viz.setEmphasis(Number(lg.value), Number(mg.value), Number(hg.value)); logAction('viz.emphasisHigh', { value: Number(hg.value) }, 'viz-emphasisHigh'); });
     if (sm) sm.addEventListener('input', e => { if (state.viz && state.viz.setSmoothing) state.viz.setSmoothing(Number(e.target.value)); logAction('viz.smoothing', { value: Number(e.target.value) }, 'viz-smoothing'); });
+    if (emphMode) emphMode.addEventListener('change', e => {
+      const mode = e.target.value;
+      if (state.viz && state.viz.setEmphasisMode) state.viz.setEmphasisMode(mode);
+      // Re-run visibility to hide/show low/mid/high sliders
+      try { updateTuningVisibility(document.getElementById('viz-style').value); } catch (_) {}
+      logAction('viz.emphasisMode', { value: mode });
+    });
 
     if (tplSel) {
       tplSel.addEventListener('change', (e) => {

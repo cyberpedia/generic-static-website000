@@ -148,15 +148,15 @@
       };
 
       window.BUG = api;
-      window.DEBUG = true; // enable debug by default
+      window.DEBUG = false; // keep debug off by default
 
+      // Create/dock panel but do not enable logging until user toggles
       api.show();
-      api.enable(); // turn on capture and logging by default
 
       // Wire toggle button
       const toggle = document.getElementById('debug-toggle');
       if (toggle) {
-        toggle.textContent = 'Disable Debug';
+        toggle.textContent = 'Enable Debug';
         toggle.addEventListener('click', () => {
           if (!api.enabled) api.enable(); else api.disable();
         });

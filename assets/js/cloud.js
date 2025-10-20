@@ -41,8 +41,13 @@
           importBtn.textContent = 'Import';
           importBtn.addEventListener('click', async () => {
             const res = await API.post('api/cloud_import.php', { provider, id: file.id, path: file.path, name: file.name });
-            if (!res.ok) alert(res.error || 'Import failed');
-            else await App.loadLibrary(true);
+            if (!res.ok) {
+              if (typeof Toast !== 'undefined') Toast.show(res.error || 'Import failed', 'error');
+              else alert(res.error || 'Import failed');
+            } else {
+              if (typeof Toast !== 'undefined') Toast.show('Imported from cloud', 'success');
+              await App.loadLibrary(true);
+            }
           });
           li.appendChild(importBtn);
           ul.appendChild(li);

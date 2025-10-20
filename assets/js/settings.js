@@ -110,7 +110,7 @@
         decay: Number(document.getElementById('viz-decay').value || 0.92),
         thickness: Number(document.getElementById('viz-thickness').value || 1),
         ringFloor: Number(document.getElementById('viz-ring-floor').value || 0.16),
-        radialFloor: Number(document.getElementById('viz-ring-floor').value || 0.16),
+        radialFloor: Number(document.getElementById('viz-radial-floor').value || 0.16),
         glowStrength: Number(document.getElementById('viz-glow-strength').value || 12),
         trailAlpha: Number(document.getElementById('viz-trail-alpha').value || 0.08),
         spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),

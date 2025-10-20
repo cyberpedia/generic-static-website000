@@ -651,7 +651,7 @@ canvas#viz {
 @media (max-width: 1100px) {
   /* legacy grid safe-guard: collapse any accidental grid usage */
   .app-grid {
-    display 2;
+    display: block;
   }
 }
 

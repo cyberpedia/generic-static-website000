@@ -505,8 +505,7 @@
       const now = performance.now();
       const energy = this.getBeatEnergy();
 
-      // crossing detection
-      const crossed = energy >= this.beatThreshold && (!this._lastAbove || !this._lastAbove);
+      // crossing detection (upward threshold crossing)
       const up = energy >= this.beatThreshold;
       if (up && !this._lastAbove) {
         this.beatHoldUntil = now + (this.beatHoldMs || 0);
