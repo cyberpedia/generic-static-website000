@@ -25,6 +25,13 @@ const API = (() => {
     return url.toString();
   }
 
+  // Build a resource URL under current directory, encoding each path segment safely (handles spaces, #, ?)
+  function resource(path) {
+    const rel = path.replace(/^\//, '');
+    const segs = rel.split('/').map(s => encodeURIComponent(s));
+    return basePath + segs.join('/');
+  }
+
   async function init() {
     const res = await fetch(buildURL('api/session.php'), { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
     const json = await res.json();
@@ -91,5 +98,5 @@ const API = (() => {
     return g;
   }
 
-  return { state, init, get, post, upload, fmtTime, gradient };
+  return { state, init, get, post, upload, fmtTime, gradient, buildURL, resource };
 })();

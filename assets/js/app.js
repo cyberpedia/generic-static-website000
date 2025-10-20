@@ -214,7 +214,7 @@ const App = (() => {
     ensureAudioContext();
     try { if (window.BUG) BUG.log('playTrack', track); } catch (_) {}
 
-    const src = 'assets/music/' + encodeURI(track.path);
+    const src = API.resource('assets/music/' + (track.path || ''));
 
     // Update UI info
     document.getElementById('track-title').textContent = track.name || track.path;
@@ -236,6 +236,13 @@ const App = (() => {
     incoming.currentTime = 0;
     incoming.playbackRate = Number(document.getElementById('rate').value || 1);
     incoming.volume = Number(document.getElementById('volume').value || 0.9);
+
+    // resume AudioContext if needed (autoplay policy)
+    try {
+      if (state.ctx && state.ctx.state === 'suspended') {
+        state.ctx.resume().catch(() => {});
+      }
+    } catch (_) {}
 
     // Art via jsmediatags if possible
     try {
@@ -265,7 +272,11 @@ const App = (() => {
       updateTime();
     }, { once: true });
 
-    incoming.play().then(() => {
+    // resume first, then play
+    const resumePromise = (state.ctx && state.ctx.state === 'suspended') ? state.ctx.resume() : Promise.resolve();
+    resumePromise.then(() => {
+      return incoming.play();
+    }).then(() => {
       if (state.ctx) crossfade(incomingGain, outgoingGain, state.crossfade);
       // mark active/inactive for reliable toggling
       state.activeAudio = incoming;
@@ -433,9 +444,16 @@ const App = (() => {
     const up = document.getElementById('upload-input');
     up.addEventListener('change', async () => {
       const files = Array.from(up.files || []);
+      try { if (window.BUG) BUG.log('upload.files', files.map(f => ({ name: f.name, size: f.size }))); } catch (_) {}
       for (const f of files) {
-        const res = await API.upload('api/upload.php', f);
-        if (!res.ok) alert(res.error || 'Upload failed');
+        try {
+          const res = await API.upload('api/upload.php', f);
+          try { if (window.BUG) BUG.log('upload.result', res); } catch (_) {}
+          if (!res.ok) alert(res.error || 'Upload failed');
+        } catch (err) {
+          console.error('Upload failed', err);
+          try { if (window.BUG) BUG.error('upload.error', err); } catch (_) {}
+        }
       }
       await loadLibrary(true);
       // auto-play the last track after upload
