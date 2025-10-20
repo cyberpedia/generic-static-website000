@@ -42,7 +42,7 @@ const App = (() => {
     // Defer AudioContext creation to first user gesture (mobile autoplay policy)
     bindUI();
     await loadLibrary();
-    PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack });
+    try { if (typeof PlaylistUI !== 'undefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (_) {}
 
     // Default slider value; actual volume applied once AudioContext is created
     document.getElementById('volume').value = 0.9;
@@ -207,6 +207,60 @@ ${item.name}`);
           notify('Delete failed: ' + err.message, 'error');
         }
       });
+
+      li.appendChild(nameSpan);
+      li.appendChild(delBtn);
+      li.addEventListener('click', () => playIndex(idx));
+      ul.appendChild(li);
+    });
+  }
+
+  function filterLibrary(query) {
+    const q = (query || '').toLowerCase();
+    if (!q) return renderLibrary();
+    const list = state.library.filter(it => (it.name || '').toLowerCase().includes(q));
+    renderLibrary(list);
+  }
+
+  function playIndex(i) {
+    try { if (window.BUG) BUG.log('playIndex', i); } catch (_) {}
+    if (i < 0 || i >= state.library.length) return;
+    const track = state.library[i];
+    state.currentIndex = i;
+    playTrack(track);
+  }
+
+  function playTrack(track) {
+    ensureAudioContext();
+    try { if (window.BUG) BUG.log('playTrack', track); } catch (_) {}
+
+    const src = API.resource('assets/music/' + (track.path || ''));
+
+    // Update UI info
+    document.getElementById('track-title').textContent = track.name || track.path;
+    state.currentTrack = { path: track.path, name: track.name };
+
+    const useA = state.useA;
+
+    const incoming = useA ? state.audioB : state.audioA;
+    const outgoing = useA ? state.audioA : state.audioB;
+    const incomingGain = useA ? state.gainB : state.gainA;
+    const outgoingGain = useA ? state.gainA : state.gainB;
+
+    if (!incoming || !outgoing) return;
+
+    // stop outgoing to avoid play() interrupted by pause()
+    try { outgoing.pause(); } catch (_) {}
+    incoming.pause();
+    incoming.src = src;
+    incoming.currentTime = 0;
+    incoming.playbackRate = Number(document.getElementById('rate').value || 1);
+    incoming.volume = Number(document.getElementById('volume').value || 0.9);
+
+    // resume AudioContext if needed (autoplay policy)
+    try {
+      if (state.ctx && state.ctx.state === 'suspended') {
+        state.ctx.resume().catch(() => {});
       }
     } catch (_) {}
 
