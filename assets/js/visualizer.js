@@ -625,25 +625,30 @@
     }
 
     drawRingWave(w, h) {
-      // smoothed time-domain ring wave (rotation advanced in draw())
-
+      // smoothed time-domain ring wave, optionally replicated around the circle via segments
       const bins = this.bins(240);
       const wave = this.getTimeWave(bins);
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
       const scale = Math.min(h / 5, r * 0.75) * this.waveScale;
 
-      this.ctx.beginPath();
-      for (let i = 0; i < bins; i++) {
-        const ang = (i / bins) * Math.PI * 2 + this.angle;
-        const len = r + wave[i] * scale;
-        const x = cx + Math.cos(ang) * len;
-        const y = cy + Math.sin(ang) * len;
-        if (i === 0) this.ctx.moveTo(x, y);
-        else this.ctx.lineTo(x, y);
+      const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
+      const segs = Math.max(1, this.segments | 0);
+
+      for (let s = 0; s < segs; s++) {
+        this.ctx.beginPath();
+        for (let i = 0; i < bins; i++) {
+          const tIdx = (i + s * bins);
+          const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle;
+          const len = r + wave[i] * scale + pulse * (h / 18); // subtle beat-driven expansion
+          const x = cx + Math.cos(ang) * len;
+          const y = cy + Math.sin(ang) * len;
+          if (i === 0) this.ctx.moveTo(x, y);
+          else this.ctx.lineTo(x, y);
+        }
+        this.ctx.closePath();
+        this.ctx.lineWidth = 2.6 * this.thickness;
+        this.ctx.stroke();
       }
-      this.ctx.closePath();
-      this.ctx.lineWidth = 2.6 * this.thickness;
-      this.ctx.stroke();
     }
 
     drawMirrorBars(w, h) {
@@ -800,17 +805,27 @@
       // particle orbit around ring with beat-driven spawning using global beat level
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
       const pulse = Math.max(0, this.beatLevel) * this.beatBoost;
-      const spawn = Math.min(8, Math.floor(pulse * 12));
-      for (let s = 0; s < spawn; s++) {
-        if (this.particles.length < this.maxParticles) {
-          this.particles.push({
-            theta: Math.random() * Math.PI * 2,
-            radius: r + Math.random() * (h / 3) * 0.5,
-            speed: 0.6 + Math.random() * 1.2,
-            life: 1.0
-          });
+      const segs = Math.max(1, this.segments | 0);
+
+      // distribute spawns across segments for uniform coverage
+      const totalSpawn = Math.min(8, Math.floor(pulse * 12));
+      const spawnPerSeg = Math.max(1, Math.floor(totalSpawn / segs));
+
+      for (let s = 0; s < segs; s++) {
+        const base = (s / segs) * Math.PI * 2;
+        for (let k = 0; k < spawnPerSeg; k++) {
+          if (this.particles.length < this.maxParticles) {
+            const jitter = (Math.random() - 0.5) * (Math.PI * 2 / segs) * 0.6;
+            this.particles.push({
+              theta: base + jitter,
+              radius: r + Math.random() * (h / 3) * 0.5,
+              speed: 0.6 + Math.random() * 1.2,
+              life: 1.0
+            });
+          }
         }
       }
+
       // update and draw
       const next = [];
       const sizeScale = 1 + 0.4 * (this.thickness - 1);

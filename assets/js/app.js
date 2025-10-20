@@ -521,7 +521,7 @@ ${item.name}`);
     } else if (s === 'wave') {
       show(['viz-thickness','viz-wave-scale','viz-glow-strength','viz-trail-alpha','viz-smooth']);
     } else if (s === 'ring') {
-      show(['viz-rot','viz-thickness','viz-wave-scale','viz-glow-strength','viz-trail-alpha','viz-smooth']);
+      show(['viz-rot','viz-thickness','viz-wave-scale','viz-segments','viz-glow-strength','viz-trail-alpha','viz-smooth']);
     } else if (s === 'radial') {
       show([
         'viz-rot','viz-decay','viz-thickness','viz-radial-floor','viz-glow-strength','viz-trail-alpha',
@@ -530,7 +530,7 @@ ${item.name}`);
         'viz-emphasis-mode','viz-smooth'
       ]);
     } else if (s === 'particles') {
-      show(['viz-thickness','viz-glow-strength','viz-trail-alpha','viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay','viz-beat-src','viz-beat-hold','viz-pulse-w','viz-smooth']);
+      show(['viz-thickness','viz-glow-strength','viz-trail-alpha','viz-segments','viz-beat-sense','viz-beat-boost','viz-beat-thresh','viz-beat-decay','viz-beat-src','viz-beat-hold','viz-pulse-w','viz-smooth']);
     } else { // circle (default)
       show(['viz-rot','viz-decay','viz-thickness','viz-ring-floor','viz-glow-strength','viz-spike-scale','viz-segments','viz-emphasis-mode','viz-smooth']);
     }
