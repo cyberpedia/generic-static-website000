@@ -678,22 +678,11 @@
     }
 
     drawRadialBars(w, h) {
-      // frequency-domain radial bars with rotation and peak decay (stereo mirrored if available)
-      // Rotation advanced globally in draw()
-
+      // frequency-domain radial bars using mono spectrum for full 360° uniform coverage
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 
-      const binsHalf = this.bins(90);
-      let peaksL, peaksR;
-      if (this.analyserL && this.analyserR) {
-        const { peaksL: pkL, peaksR: pkR } =
-          this.getStereoSpectrum(binsHalf, 1.0, this.radialFloor);
-        peaksL = pkL; peaksR = pkR;
-      } else {
-        const mono = this.getSpectrum(binsHalf * 2, 1.0, this.radialFloor);
-        peaksL = mono.peaks.slice(0, binsHalf);
-        peaksR = mono.peaks.slice(binsHalf);
-      }
+      const bins = this.bins(180);
+      const { peaks } = this.getSpectrum(bins, 1.0, this.radialFloor);
 
       // Beat ring using global beat level
       const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
@@ -709,51 +698,27 @@
       this.ctx.save();
       this.ctx.lineCap = 'round';
 
-      const total = binsHalf * 2;
-      for (let i = 0; i < binsHalf; i++) {
-        // left half
-        const pvL = peaksL[i];
-        const angleL = (i / total) * Math.PI * 2 + this.angle;
-        const lenL = r + Math.pow(pvL, 1.2) * (h / 3);
-        const x0L = cx + Math.cos(angleL) * r;
-        const y0L = cy + Math.sin(angleL) * r;
-        const x1L = cx + Math.cos(angleL) * lenL;
-        const y1L = cy + Math.sin(angleL) * lenL;
+      for (let i = 0; i < bins; i++) {
+        const v = peaks[i];
+        const ang = (i / bins) * Math.PI * 2 + this.angle;
+        const len = r + Math.pow(v, 1.2) * (h / 3);
+        const x0 = cx + Math.cos(ang) * r;
+        const y0 = cy + Math.sin(ang) * r;
+        const x1 = cx + Math.cos(ang) * len;
+        const y1 = cy + Math.sin(ang) * len;
 
-        const tL = i / (total - 1);
-        this.ctx.strokeStyle = lerpColor(this.color1, this.color2, tL);
-        this.ctx.lineWidth = (2.2 + pvL * 3.6) * this.thickness;
+        const t = i / (bins - 1);
+        this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
+        this.ctx.lineWidth = (2.2 + v * 3.6) * this.thickness;
 
         this.ctx.beginPath();
-        this.ctx.moveTo(x0L, y0L);
-        this.ctx.lineTo(x1L, y1L);
+        this.ctx.moveTo(x0, y0);
+        this.ctx.lineTo(x1, y1);
         this.ctx.stroke();
 
+        // cap dot
         this.ctx.beginPath();
-        this.ctx.arc(x1L, y1L, (2.0 + pvL * 2.6) * this.thickness, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        this.ctx.fill();
-
-        // right half
-        const pvR = peaksR[i];
-        const angleR = ((i + binsHalf) / total) * Math.PI * 2 + this.angle;
-        const lenR = r + Math.pow(pvR, 1.2) * (h / 3);
-        const x0R = cx + Math.cos(angleR) * r;
-        const y0R = cy + Math.sin(angleR) * r;
-        const x1R = cx + Math.cos(angleR) * lenR;
-        const y1R = cy + Math.sin(angleR) * lenR;
-
-        const tR = (i + binsHalf) / (total - 1);
-        this.ctx.strokeStyle = lerpColor(this.color1, this.color2, tR);
-        this.ctx.lineWidth = (2.2 + pvR * 3.6) * this.thickness;
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(x0R, y0R);
-        this.ctx.lineTo(x1R, y1R);
-        this.ctx.stroke();
-
-        this.ctx.beginPath();
-        this.ctx.arc(x1R, y1R, (2.0 + pvR * 2.6) * this.thickness, 0, Math.PI * 2);
+        this.ctx.arc(x1, y1, (2.0 + v * 2.6) * this.thickness, 0, Math.PI * 2);
         this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
         this.ctx.fill();
       }
@@ -776,7 +741,7 @@
     }
 
     drawCircle(w, h) {
-      // base ring + controlled amplitude spikes; stereo mirrored if available
+      // base ring + uniform amplitude spikes around full 360° using mono spectrum
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 
       // draw a continuous base ring (no dots) for perfect circle
@@ -787,51 +752,25 @@
       this.ctx.stroke();
       this.ctx.restore();
 
-      const binsHalf = 90;
+      const bins = this.bins(180);
+      const { peaks } = this.getSpectrum(bins, 1.0, this.ringFloor);
       const spikeScale = Math.min(h / 4, r * 0.65) * this.spikeScale;
 
-      // stereo or mono peaks (use decay so the Decay slider affects circle)
-    let peaksL, peaksR;
-    if (this.analyserL && this.analyserR) {
-      const stereo = this.getStereoSpectrum(binsHalf, 1.0, this.ringFloor);
-      peaksL = stereo.peaksL;
-      peaksR = stereo.peaksR;
-    } else {
-      const mono = this.getSpectrum(binsHalf * 2, 1.0, this.ringFloor);
-      peaksL = mono.peaks.slice(0, binsHalf);
-      peaksR = mono.peaks.slice(binsHalf);
-    }
+      for (let i = 0; i < bins; i++) {
+        const v = peaks[i];
+        const ang = (i / bins) * Math.PI * 2 + this.angle;
+        const len = r + Math.pow(v, 1.10) * spikeScale;
+        const x0 = cx + Math.cos(ang) * r;
+        const y0 = cy + Math.sin(ang) * r;
+        const x1 = cx + Math.cos(ang) * len;
+        const y1 = cy + Math.sin(ang) * len;
 
-    // amplitude spikes around full circle: left on [0..pi], right on [pi..2pi]
-    for (let i = 0; i < binsHalf; i++) {
-      const pvL = peaksL[i];
-      const angL = (i / (binsHalf * 2)) * Math.PI * 2 + this.angle;
-      const lenL = r + Math.pow(pvL, 1.10) * spikeScale;
-      const x0L = cx + Math.cos(angL) * r;
-      const y0L = cy + Math.sin(angL) * r;
-      const x1L = cx + Math.cos(angL) * lenL;
-      const y1L = cy + Math.sin(angL) * lenL;
-
-      this.ctx.beginPath();
-      this.ctx.moveTo(x0L, y0L);
-      this.ctx.lineTo(x1L, y1L);
-      this.ctx.lineWidth = (1.8 + pvL * 2.0) * this.thickness;
-      this.ctx.stroke();
-
-      const pvR = peaksR[i];
-      const angR = ((i + binsHalf) / (binsHalf * 2)) * Math.PI * 2 + this.angle;
-      const lenR = r + Math.pow(pvR, 1.10) * spikeScale;
-      const x0R = cx + Math.cos(angR) * r;
-      const y0R = cy + Math.sin(angR) * r;
-      const x1R = cx + Math.cos(angR) * lenR;
-      const y1R = cy + Math.sin(angR) * lenR;
-
-      this.ctx.beginPath();
-      this.ctx.moveTo(x0R, y0R);
-      this.ctx.lineTo(x1R, y1R);
-      this.ctx.lineWidth = (1.8 + pvR * 2.0) * this.thickness;
-      this.ctx.stroke();
-    }
+        this.ctx.beginPath();
+        this.ctx.moveTo(x0, y0);
+        this.ctx.lineTo(x1, y1);
+        this.ctx.lineWidth = (1.8 + v * 2.0) * this.thickness;
+        this.ctx.stroke();
+      }
 
       // progress arc overlay (12 o'clock start, clockwise)
       if (this.progress > 0) {

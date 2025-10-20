@@ -192,8 +192,15 @@ const App = (() => {
     if (state.orientation === 'landscape') isLandscape = true;
     else if (state.orientation === 'portrait') isLandscape = false;
     else isLandscape = vw > vh;
-    let targetH = isLandscape ? Math.round(Math.min(380, Math.max(140, vh * 0.55)))
-                              : Math.round(Math.min(380, Math.max(160, vh * 0.42)));
+
+    // Portrait should be taller; Landscape more compact
+    const portraitRatio = 0.65;
+    const landscapeRatio = 0.45;
+
+    let targetH = isLandscape
+      ? Math.round(Math.min(420, Math.max(140, vh * landscapeRatio)))
+      : Math.round(Math.min(480, Math.max(160, vh * portraitRatio)));
+
     canvas.style.height = targetH + 'px';
     try { state.viz && state.viz.resize(); } catch (_) {}
   }
