@@ -58,11 +58,11 @@
           <canvas id="viz" width="960" height="300"></canvas>
 
           <div class="controls">
-            <button id="prev" class="btn">Prev</button>
-            <button id="play" class="btn primary">Play</button>
-            <button id="next" class="btn">Next</button>
-            <button id="shuffle" class="btn" title="Shuffle">Shuffle</button>
-            <button id="repeat" class="btn" title="Repeat">Repeat</button>
+            <button id="prev" class="btn secondary">Prev</button>
+            <button id="play" class="btn success">Play</button>
+            <button id="next" class="btn secondary">Next</button>
+            <button id="shuffle" class="btn secondary" title="Shuffle">Shuffle</button>
+            <button id="repeat" class="btn secondary" title="Repeat">Repeat</button>
 
             <div class="slider-group">
               <label>Volume</label>
@@ -74,10 +74,10 @@
               <input type="range" id="rate" min="0.5" max="2" step="0.01" value="1"/>
             </div>
 
-            <button id="pitch-lock" class="btn" title="Preserve pitch when changing speed">Pitch Lock</button>
+            <button id="pitch-lock" class="btn success" title="Preserve pitch when changing speed">Pitch Lock</button>
 
             <button id="delete-track" class="btn danger" title="Delete current track">Delete Track</button>
-            <button id="record" class="btn" title="Record visualizer">Record</button>
+            
           </div>
 
           <div class="customize">
@@ -151,8 +151,52 @@
             </div>
           </div>
 
-          <!-- Logger docked inside visualizer layout -->
-          <div id="logger-anchor"></div>
+          <!-- Layers panel -->
+          <div class="panel layers-panel">
+            <div class="panel-head">
+              <h3>Layers</h3>
+              <button id="layer-add" class="btn primary">+</button>
+            </div>
+            <ul id="layers-list" class="layers">
+              <li data-layer="circle"><span class="handle">⋮⋮</span><span class="name">Circle</span><span class="actions"><button class="eye btn secondary" title="Visible">👁</button><button class="gear btn secondary" title="Settings">⚙️</button><button class="trash btn danger" title="Delete">🗑</button></span></li>
+              <li data-layer="image"><span class="handle">⋮⋮</span><span class="name">Image</span><span class="actions"><button class="eye btn secondary">👁</button><button class="gear btn secondary">⚙️</button><button class="trash btn danger">🗑</button></span></li>
+              <li data-layer="background"><span class="handle">⋮⋮</span><span class="name">Background</span><span class="actions"><button class="eye btn secondary">👁</button><button class="gear btn secondary">⚙️</button><button class="trash btn danger">🗑</button></span></li>
+            </ul>
+          </div>
+
+          <!-- Project actions -->
+          <div class="panel actions-panel">
+            <div class="panel-head">
+              <h3>Project</h3>
+            </div>
+            <div class="actions-row">
+              <button id="save-project" class="btn primary">Save Project</button>
+              <button id="load-project" class="btn secondary">Load Project</button>
+              <input type="file" id="load-project-input" accept="application/json" style="display:none"/>
+            </div>
+            <div class="actions-row">
+              <button id="choose-audio" class="btn secondary">Choose audio files</button>
+              <button id="snapshot" class="btn secondary">Snapshot</button>
+              <button id="record" class="btn primary">Record</button>
+            </div>
+          </div>
+
+          <!-- Live Console -->
+          <div class="panel console-panel">
+            <div class="panel-head">
+              <h3>Live Console</h3>
+              <button id="console-clear" class="btn secondary">Clear</button>
+            </div>
+            <div id="live-console"></div>
+          </div>
+
+          <!-- Status -->
+          <div class="panel status-panel">
+            <div class="panel-head">
+              <h3>Status</h3>
+            </div>
+            <pre id="status-info" class="status-pre">Initializing…</pre>
+          </div>
 
         </div>
       </section>
@@ -192,15 +236,15 @@
 
   
 
-  <script src="assets/js/utils.js?v=20251020-12"></script>
-  <script src="assets/js/equalizer.js?v=20251020-12"></script>
-  <script src="assets/js/visualizer.js?v=20251020-12"></script>
-  <script src="assets/js/playlists.js?v=20251020-12"></script>
-  <script src="assets/js/settings.js?v=20251020-12"></script>
-  <script src="assets/js/cloud.js?v=20251020-12"></script>
-  <script src="assets/js/logger.js?v=20251020-12"></script>
-  <script src="assets/js/toast.js?v=20251020-12"></script>
-  <script src="assets/script.js?v=20251020-12"></script>
-  <script src="assets/js/app.js?v=20251020-12"></script>
+  <script src="assets/js/utils.js?v=20251020-13"></script>
+  <script src="assets/js/equalizer.js?v=20251020-13"></script>
+  <script src="assets/js/visualizer.js?v=20251020-13"></script>
+  <script src="assets/js/playlists.js?v=20251020-13"></script>
+  <script src="assets/js/settings.js?v=20251020-13"></script>
+  <script src="assets/js/cloud.js?v=20251020-13"></script>
+  <script src="assets/js/logger.js?v=20251020-13"></script>
+  <script src="assets/js/toast.js?v=20251020-13"></script>
+  <script src="assets/script.js?v=20251020-13"></script>
+  <script src="assets/js/app.js?v=20251020-13"></script>
 </body>
 </html>

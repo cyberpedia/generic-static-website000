@@ -46,6 +46,13 @@ const App = (() => {
 
     // Default slider value; actual volume applied once AudioContext is created
     document.getElementById('volume').value = 0.9;
+
+    // Status updater
+    try {
+      if (state.timerInterval) clearInterval(state.timerInterval);
+      state.timerInterval = setInterval(updateStatus, 1000);
+      updateStatus();
+    } catch (_) {}
   }
 
   function ensureAudioContext() {
@@ -369,6 +376,34 @@ ${item.name}`);
     }
   }
 
+  function updateStatus() {
+    try {
+      const ctxState = state.ctx ? state.ctx.state : 'inactive';
+      const a = state.audioA, b = state.audioB;
+      const active = state.activeAudio || (state.useA ? b : a);
+      const playing = active ? !active.paused : false;
+      const rec = !!state.recorder;
+      const track = state.currentTrack ? (state.currentTrack.name || state.currentTrack.path) : 'N/A';
+      const layersCount = (document.getElementById('layers-list')?.children?.length) || 0;
+      const selected = 'none';
+      const beat = false;
+
+      const lines = [
+        `AudioContext: ${ctxState}`,
+        `Track: ${track}`,
+        `Playing: ${playing}`,
+        `Recording: ${rec}`,
+        `Layers: ${layersCount}`,
+        `Selected: ${selected}`,
+        `Beat Detected: ${beat}`
+      ];
+      const pre = document.getElementById('status-info');
+      if (pre) pre.textContent = lines.join('\n');
+    } catch (err) {
+      try { if (window.BUG) BUG.error('updateStatus', err); } catch (_) {}
+    }
+  }
+
   function onEnded() {
     try { if (window.BUG) BUG.log('onEnded', { idx: state.currentIndex, repeat: state.repeat, shuffle: state.shuffle }); } catch (_) {}
     if (state.repeat) {
@@ -591,6 +626,137 @@ ${item.name}`);
     });
 
     document.getElementById('record').addEventListener('click', () => toggleRecording());
+
+    // Snapshot
+    const snapBtn = document.getElementById('snapshot');
+    if (snapBtn) {
+      snapBtn.addEventListener('click', () => {
+        const canvas = document.getElementById('viz');
+        if (!canvas) return;
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'visualizer.png';
+        a.click();
+      });
+    }
+
+    // Choose audio files: forwards click to upload input
+    const chooseBtn = document.getElementById('choose-audio');
+    if (chooseBtn) {
+      chooseBtn.addEventListener('click', () => {
+        const up = document.getElementById('upload-input');
+        if (up) up.click();
+      });
+    }
+
+    // Save/Load Project (simple JSON of visualizer+EQ settings)
+    const saveProj = document.getElementById('save-project');
+    const loadProj = document.getElementById('load-project');
+    const loadInp = document.getElementById('load-project-input');
+
+    function collectProject() {
+      const proj = {
+        viz: {
+          style: document.getElementById('viz-style').value,
+          colors: [document.getElementById('viz-color-1').value, document.getElementById('viz-color-2').value],
+          glow: document.getElementById('viz-glow').checked,
+          trail: document.getElementById('viz-trail').checked,
+          art: document.getElementById('viz-art').checked,
+          tuning: {
+            rotation: Number(document.getElementById('viz-rot').value || 0),
+            decay: Number(document.getElementById('viz-decay').value || 0.9),
+            thickness: Number(document.getElementById('viz-thickness').value || 1),
+            floor: Number(document.getElementById('viz-ring-floor').value || 0.16),
+            glowStrength: Number(document.getElementById('viz-glow-strength').value || 12),
+            trailAlpha: Number(document.getElementById('viz-trail-alpha').value || 0.08),
+            spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),
+            waveScale: Number(document.getElementById('viz-wave-scale').value || 1),
+          }
+        },
+        eqPreset: document.getElementById('eq-preset').value,
+        track: state.currentTrack || null
+      };
+      return proj;
+    }
+
+    function applyProject(proj) {
+      try {
+        document.getElementById('viz-style').value = proj.viz.style;
+        document.getElementById('viz-color-1').value = proj.viz.colors[0];
+        document.getElementById('viz-color-2').value = proj.viz.colors[1];
+        document.getElementById('viz-glow').checked = !!proj.viz.glow;
+        document.getElementById('viz-trail').checked = !!proj.viz.trail;
+        document.getElementById('viz-art').checked = !!proj.viz.art;
+        document.getElementById('viz-rot').value = proj.viz.tuning.rotation;
+        document.getElementById('viz-decay').value = proj.viz.tuning.decay;
+        document.getElementById('viz-thickness').value = proj.viz.tuning.thickness;
+        document.getElementById('viz-ring-floor').value = proj.viz.tuning.floor;
+        document.getElementById('viz-glow-strength').value = proj.viz.tuning.glowStrength;
+        document.getElementById('viz-trail-alpha').value = proj.viz.tuning.trailAlpha;
+        document.getElementById('viz-spike-scale').value = proj.viz.tuning.spikeScale;
+        document.getElementById('viz-wave-scale').value = proj.viz.tuning.waveScale;
+        document.getElementById('eq-preset').value = proj.eqPreset;
+
+        // Apply to live visualizer/equalizer
+        if (state.viz) {
+          state.viz.setStyle(proj.viz.style);
+          state.viz.setColors(proj.viz.colors[0], proj.viz.colors[1]);
+          state.viz.setGlow(!!proj.viz.glow);
+          state.viz.setTrail(!!proj.viz.trail);
+          state.viz.setShowArt(!!proj.viz.art);
+          state.viz.setRotationSpeed(Number(proj.viz.tuning.rotation));
+          state.viz.setDecay(Number(proj.viz.tuning.decay));
+          state.viz.setThickness(Number(proj.viz.tuning.thickness));
+          const floor = Number(proj.viz.tuning.floor);
+          state.viz.setRingFloor(floor);
+          state.viz.setRadialFloor(floor);
+          state.viz.setGlowStrength(Number(proj.viz.tuning.glowStrength));
+          state.viz.setTrailAlpha(Number(proj.viz.tuning.trailAlpha));
+          state.viz.setSpikeScale(Number(proj.viz.tuning.spikeScale));
+          state.viz.setWaveScale(Number(proj.viz.tuning.waveScale));
+        }
+        if (state.eq) state.eq.setPreset(proj.eqPreset);
+
+        if (proj.track && proj.track.path) {
+          // Attempt to load the same track
+          const item = state.library.find(it => it.path === proj.track.path);
+          if (item) playTrack(item);
+        }
+        notify('Project loaded', 'success');
+      } catch (err) {
+        notify('Failed to apply project: ' + err.message, 'error');
+      }
+    }
+
+    if (saveProj) {
+      saveProj.addEventListener('click', () => {
+        const proj = collectProject();
+        const blob = new Blob([JSON.stringify(proj, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'visualizer-project.json';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+      });
+    }
+    if (loadProj && loadInp) {
+      loadProj.addEventListener('click', () => loadInp.click());
+      loadInp.addEventListener('change', async () => {
+        const f = loadInp.files[0];
+        if (!f) return;
+        try {
+          const text = await f.text();
+          const proj = JSON.parse(text);
+          applyProject(proj);
+        } catch (err) {
+          notify('Failed to load project: ' + err.message, 'error');
+        } finally {
+          loadInp.value = '';
+        }
+      });
+    }
 
     const delBtn = document.getElementById('delete-track');
     if (delBtn) {

@@ -95,6 +95,11 @@ footer {
   margin: 0 auto;
 }
 
+/* Visual order: player first, library second, playlists third */
+.studio .player-core { order: 1; }
+.studio .library { order: 2; }
+.studio .playlists { order: 3; }
+
 .sidebar {
   background: #101528;
   border: 1px solid #1c2236;
@@ -205,7 +210,9 @@ footer {
   border-radius: 0;
   padding: 0;
   display: flex;
-  flex-direction:
+  flex-direction: column;
+}
+
 /* Visualizer layout card wraps canvas + controls + tuning + EQ + logger */
 .viz-layout {
   background: #12151d;
@@ -233,23 +240,86 @@ footer {
   border-color: #1c2236;
 }
 
-/* Logger styling inside viz-layout */
-.viz-layout #debug-panel {
-  position: static !important;
-  width: 100% !important;
-  max-height: 28vh;
-  background: #0f1322;
-  color: #e6e6e9;
-  border: 1px solid #1c2236;
-  border-radius: 12px;
-  margin-top: 10px;
+/* Panel base */
+.panel {
+  background: #1a1f29;
+  border: 1px solid #242b3a;
+  border-radius: 14px;
+  padding: clamp(10px, 2vw, 16px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  margin-top: clamp(10px, 2vw, 16px);
+}
+.panel-head {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
-.viz-layout #debug-panel pre {
-  background: #0c111d;
-  border-top: 1px solid #1c2236;
+.panel-head h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #f2f5ff;
 }
+
+/* Layers list */
+.layers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.layers li {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  background: #222736;
+  border: 1px solid #2c3345;
+  border-radius: 10px;
+  padding: 10px;
+  color: #e6e6e9;
+  margin-bottom: 8px;
+}
+.layers li .handle { color: #4c5570; }
+.layers li .name { font-weight: 700; }
+.layers li .actions { display: inline-flex; gap: 6px; }
+
+/* Actions rows */
+.actions-panel .actions-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Console */
+.console-panel #live-console {
+  background: #0f1322;
+  border: 1px solid #1c2236;
+  border-radius: 10px;
+  padding: 8px;
+  min-height: 120px;
+  max-height: 32vh;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: #e6e6e9;
+}
+.console-panel #live-console .line {
+  border-bottom: 1px solid #1c2236;
+  padding: 4px 0;
+  font-size: 0.9rem;
+}
+
+/* Status */
+.status-pre {
+  background: #0f1322;
+  border: 1px solid #1c2236;
+  border-radius: 10px;
+  padding: 10px;
+  color: #e6e6e9;
+  font-family: ui-monospace, monospace;
+  font-size: 0.95rem;
+}
+
+/* Logger legacy panel removed in favor of console-panel */
 
 .art-and-info {
   display: grid;
@@ -306,26 +376,35 @@ canvas#viz {
 }
 
 .btn {
-  background: #e8ecf6;
-  color: #1d2433;
+  background: #2c3342;
+  color: #e8ecf6;
   border: none;
-  padding: 0.5rem 0.8rem;
-  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 12px;
   cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.25);
 }
 .btn:hover {
-  background: #dae0ee;
+  background: #343b4c;
 }
 .btn.primary {
   background: #2e7be7;
   color: #fff;
 }
+.btn.secondary {
+  background: #3a414f;
+  color: #e6e6e9;
+}
+.btn.success {
+  background: #1fb855;
+  color: #fff;
+}
 .btn.danger {
-  background: #fbe9e9;
-  color: #7a1d1d;
+  background: #c43d3d;
+  color: #fff;
 }
 .btn.danger:hover {
-  background: #f5d7d7;
+  background: #aa3434;
 }
 
 /* Sliders */
@@ -346,10 +425,13 @@ canvas#viz {
   gap: 1rem;
   align-items: center;
   margin: 0.5rem 0;
+  color: #e6e6e9;
 }
 .customize .viz-style select {
   padding: 0.3rem 0.5rem;
-  border: 1px solid #d8dce6;
+  border: 1px solid #3a4155;
+  background: #0f1322;
+  color: #e6e6e9;
   border-radius: 8px;
 }
 .customize .presets {
@@ -382,10 +464,11 @@ canvas#viz {
   justify-content: space-between;
   gap: 0.6rem;
   font-size: 0.9rem;
-  background: #f6f8ff;
-  border: 1px solid #e6e9f2;
+  background: #0f1322;
+  border: 1px solid #1c2236;
   border-radius: 10px;
   padding: 0.35rem 0.6rem;
+  color: #c9d7ff;
 }
 .customize .viz-tuning input[type="range"] {
   width: 140px;
@@ -393,7 +476,9 @@ canvas#viz {
 
 .customize .presets input[type="text"], .customize .presets select {
   padding: 0.35rem 0.5rem;
-  border: 1px solid #d8dce6;
+  border: 1px solid #3a4155;
+  background: #0f1322;
+  color: #e6e6e9;
   border-radius: 8px;
 }
 
@@ -407,10 +492,11 @@ canvas#viz {
 .eq-panel {
   display: none;
   margin-top: 0.6rem;
-  background: #f5f7fb;
-  border: 1px solid #e6e9f2;
+  background: #101528;
+  border: 1px solid #1c2236;
   border-radius: 12px;
   padding: 0.6rem;
+  color: #e6e6e9;
 }
 .eq-panel.show {
   display: block;
@@ -427,7 +513,7 @@ canvas#viz {
 }
 .eq-panel .bands .band label {
   font-size: 0.8rem;
-  color: #555;
+  color: #c9d7ff;
   margin-bottom: 0.25rem;
 }
 .eq-panel .bands .band input[type="range"] {
