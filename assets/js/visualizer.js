@@ -125,7 +125,7 @@ class Visualizer {
     this.segments = Math.max(1, Math.min(8, v));
   }
 
-  getSpectrum(bins, gamma = 2.0) {
+  getSpectrum(bins, gamma = 2.0, floorOverride = null) {
     this.analyser.getFloatFrequencyData(this.freqFloat);
 
     // peak for adaptive scaling
@@ -149,23 +149,27 @@ class Visualizer {
 
       // frequency emphasis so highs are visible around full ring
       const t = i / (bins - 1);
-      const emphasis = 0.40 + 0.60 * Math.pow(t, 0.70); // boost high bins
+      const emphasis = 0.45 + 0.55 * Math.pow(t, 0.8); // boost high bins modestly
       v *= emphasis;
 
       // minimum floor so no dead zones
-      const floor = 0.12;
+      const floor = floorOverride !== null ? floorOverride : 0.12;
       v = floor + v * (1 - floor);
 
-      raw[i] = Math.pow(v, 1.10) * gain;
+      raw[i] = Math.pow(v, 1.08) * gain;
     }
 
-    // angular smoothing to remove clumps (moving-average over neighbors)
+    // angular smoothing to remove clumps (weighted 5-point kernel)
     const levels = new Array(bins).fill(0);
+    const w0 = 1, w1 = 2, w2 = 3;
+    const norm = w2 + w1 * 2 + w0 * 2; // 3 + 4 + 2 = 9
     for (let i = 0; i < bins; i++) {
-      const i0 = (i - 1 + bins) % bins;
-      const i1 = i;
-      const i2 = (i + 1) % bins;
-      levels[i] = (raw[i0] + raw[i1] + raw[i2]) / 3;
+      const i_2 = (i - 2 + bins) % bins;
+      const i_1 = (i - 1 + bins) % bins;
+      const i0 = i;
+      const i1 = (i + 1) % bins;
+      const i2 = (i + 2) % bins;
+      levels[i] = (raw[i_2] * w0 + raw[i_1] * w1 + raw[i0] * w2 + raw[i1] * w1 + raw[i2] * w0) / norm;
     }
 
     // peak-hold per bin
@@ -291,8 +295,8 @@ class Visualizer {
     this.lastTS = now;
     this.angle += this.rotation * dt;
 
-    const bins = 180; // enough bars to fill full circle without duplication
-    const { levels, peaks } = this.getSpectrum(bins, 2.1);
+    const bins = 180; // enough bars to fill full circle
+    const { levels, peaks } = this.getSpectrum(bins, 1.0, 0.16);
 
     // avg for beat ring
     let avg = 0;
@@ -317,7 +321,7 @@ class Visualizer {
     for (let i = 0; i < bins; i++) {
       const pv = peaks[i];
       const angle = (i / bins) * Math.PI * 2 + this.angle;
-      const len = r + Math.pow(pv, 1.25) * (h / 3);
+      const len = r + Math.pow(pv, 1.2) * (h / 3);
       const x0 = cx + Math.cos(angle) * r;
       const y0 = cy + Math.sin(angle) * r;
       const x1 = cx + Math.cos(angle) * len;
@@ -325,7 +329,7 @@ class Visualizer {
 
       const t = i / (bins - 1);
       this.ctx.strokeStyle = lerpColor(this.color1, this.color2, t);
-      this.ctx.lineWidth = 2.2 + pv * 3.8;
+      this.ctx.lineWidth = 2.2 + pv * 3.6;
 
       this.ctx.beginPath();
       this.ctx.moveTo(x0, y0);
@@ -334,7 +338,7 @@ class Visualizer {
 
       // cap dot
       this.ctx.beginPath();
-      this.ctx.arc(x1, y1, 2.2 + pv * 2.8, 0, Math.PI * 2);
+      this.ctx.arc(x1, y1, 2.0 + pv * 2.6, 0, Math.PI * 2);
       this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
       this.ctx.fill();
     }
@@ -345,7 +349,7 @@ class Visualizer {
   drawCircle(w, h) {
     // crisp base ring + controlled amplitude spikes
     const bins = 180;
-    const { levels } = this.getSpectrum(bins, 2.1);
+    const { levels } = this.getSpectrum(bins, 1.0, 0.18);
 
     const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 
@@ -362,7 +366,7 @@ class Visualizer {
     for (let i = 0; i < bins; i++) {
       const angle = (i / bins) * Math.PI * 2 + this.angle * 0.25;
       const v = levels[i];
-      const len = r + Math.pow(v, 1.15) * spikeScale;
+      const len = r + Math.pow(v, 1.12) * spikeScale;
       const x0 = cx + Math.cos(angle) * r;
       const y0 = cy + Math.sin(angle) * r;
       const x1 = cx + Math.cos(angle) * len;
@@ -371,7 +375,7 @@ class Visualizer {
       this.ctx.beginPath();
       this.ctx.moveTo(x0, y0);
       this.ctx.lineTo(x1, y1);
-      this.ctx.lineWidth = 1.8 + v * 2.2;
+      this.ctx.lineWidth = 1.9 + v * 2.1;
       this.ctx.stroke();
     }
   }
