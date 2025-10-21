@@ -2,9 +2,23 @@
   if (window.Cloud) return;
 
   window.Cloud = (() => {
+    let loaded = false;
+
     async function init() {
       bindUI();
-      await refreshLists();
+      // Lazy-load cloud lists only when user opens the "Cloud Files" section
+      const ul = document.getElementById('cloud-list');
+      const details = ul ? ul.closest('details') : null;
+      if (details) {
+        details.addEventListener('toggle', async () => {
+          if (details.open && !loaded) {
+            // clear existing items then load
+            ul.innerHTML = '';
+            await refreshLists();
+            loaded = true;
+          }
+        });
+      }
     }
 
     function bindUI() {

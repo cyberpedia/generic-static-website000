@@ -690,7 +690,7 @@
       const currentStyle = (this.layers.length && this.sel >= 0) ? (this.layers[this.sel]?.style || this.style) : this.style;
       const trailStyles = new Set(['radial', 'ring', 'particles', 'bars', 'mirror', 'wave']);
       if (this.trail && trailStyles.has(currentStyle)) {
-        const alpha = this.fast ? Math.min(this.trailAlpha, 0.04) : this.trailAlpha;
+        const alpha = this.performance ? Math.min(this.trailAlpha, 0.03) : (this.fast ? Math.min(this.trailAlpha, 0.04) : this.trailAlpha);
         ctx.fillStyle = `rgba(15,19,34,${alpha})`;
         ctx.fillRect(0, 0, w, h);
       } else {
@@ -747,7 +747,7 @@
         if (this.glow) {
           const g = (L.glowStrength ?? this.glowStrength);
           ctx.shadowColor = c2;
-          ctx.shadowBlur = this.fast ? Math.min(g, 6) : g;
+          ctx.shadowBlur = this.performance ? Math.min(g, 4) : (this.fast ? Math.min(g, 6) : g);
         } else {
           ctx.shadowColor = 'transparent';
           ctx.shadowBlur = 0;
@@ -799,8 +799,13 @@
         const v = peaks[i];
         const bh = v * h;
         const x = i * bw + (gap / 2);
-        ctxRoundRect(this.ctx, x, h - bh, width, bh, 4);
-        this.ctx.fill();
+        if (this.performance || this.fast) {
+          // simpler rect for performance
+          this.ctx.fillRect(x, h - bh, width, bh);
+        } else {
+          ctxRoundRect(this.ctx, x, h - bh, width, bh, 4);
+          this.ctx.fill();
+        }
       }
     }
 
@@ -855,6 +860,8 @@
     drawMirrorBars(w, h, L) {
       const thickness = (L?.thickness ?? this.thickness);
       const floor = (L?.radialFloor ?? this.radialFloor);
+      const c1 = (L?.color1 ?? this.color1);
+      const c2 = (L?.color2 ?? this.color2);
       const bins = this.bins(100);
       const { peaks } = this.getSpectrum(bins, 1.0, floor);
       const bw = w / bins;
@@ -864,20 +871,31 @@
       this.ctx.save();
       this.ctx.lineCap = 'round';
 
+      // precompute gradient for performance mode
+      const gradFast = (this.performance || this.fast) ? API.gradient(this.ctx, c1, c2, w, h) : null;
+
       for (let i = 0; i < bins; i++) {
         const v = peaks[i];
         const bh = v * (h / 2);
         const x = i * bw + (gap / 2);
-        const t = i / (bins - 1);
-        this.ctx.fillStyle = lerpColor(this.color1, this.color2, t);
+        if (gradFast) {
+          this.ctx.fillStyle = gradFast;
+        } else {
+          const t = i / (bins - 1);
+          this.ctx.fillStyle = lerpColor(c1, c2, t);
+        }
 
         // bottom bars mirrored around center line
-        ctxRoundRect(this.ctx, x, h / 2, width, bh, 4);
-        this.ctx.fill();
-
-        // top bars mirrored
-        ctxRoundRect(this.ctx, x, h / 2 - bh, width, bh, 4);
-        this.ctx.fill();
+        if (this.performance || this.fast) {
+          this.ctx.fillRect(x, h / 2, width, bh);
+          this.ctx.fillRect(x, h / 2 - bh, width, bh);
+        } else {
+          ctxRoundRect(this.ctx, x, h / 2, width, bh, 4);
+          this.ctx.fill();
+          // top bars mirrored
+          ctxRoundRect(this.ctx, x, h / 2 - bh, width, bh, 4);
+          this.ctx.fill();
+        }
       }
 
       this.ctx.restore();
@@ -1023,7 +1041,7 @@
       const pulse = Math.max(0, this.beatLevel) * this.beatBoost;
       const segs = Math.max(1, segments | 0);
 
-      const totalSpawn = Math.min(8, Math.floor(pulse * 12));
+      const totalSpawn = Math.min((this.performance || this.fast) ? 5 : 8, Math.floor(pulse * ((this.performance || this.fast) ? 8 : 12)));
       const spawnPerSeg = Math.max(1, Math.floor(totalSpawn / segs));
 
       for (let s = 0; s < segs; s++) {
@@ -1062,6 +1080,7 @@
 
     drawCenterArt(w, h) {
       if (!this.showArt || !this.artImage) return;
+      if (this.performance) return; // skip art compositing in performance mode
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3 * 0.62;
       this.ctx.save();
       this.ctx.beginPath();
