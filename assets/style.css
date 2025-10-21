@@ -266,14 +266,13 @@ footer {
   font-size: 1.4rem;
 }
 .md-fab:hover { background: #2a73d8; }
-#fab-layers { bottom: 152px; }
-#fab-add-layer { bottom: 216px; }
+#fab-main { bottom: 88px; }
 
-/* Popover menu for adding layers */
+/* Popover menu for main FAB */
 .md-popmenu {
   position: fixed;
   right: 16px;
-  bottom: 216px;
+  bottom: 152px; /* above the main FAB */
   z-index: 1110;
   display: none;
   flex-direction: column;
@@ -286,7 +285,7 @@ footer {
 }
 .md-popmenu.open { display: flex; }
 .md-popmenu .icon-btn {
-  min-width: 160px;
+  min-width: 180px;
   justify-content: flex-start;
   gap: 8px;
 }

@@ -88,17 +88,18 @@
           </div>
 
           <!-- Floating Customize button + drawer -->
-          <button id="fab-customize" class="md-fab" aria-label="Customize visualizer" title="Customize">✎</button>
-          <button id="fab-layers" class="md-fab" aria-label="Layers" title="Layers">☷</button>
-          <button id="fab-add-layer" class="md-fab" aria-label="Add Layer" title="Add Layer">＋</button>
-          <div id="layer-type-menu" class="md-popmenu" aria-label="Add Layer Menu">
-            <button class="icon-btn" data-type="circle">Circle</button>
-            <button class="icon-btn" data-type="radial">Radial Bars</button>
-            <button class="icon-btn" data-type="ring">Ring Wave</button>
-            <button class="icon-btn" data-type="bars">Bars</button>
-            <button class="icon-btn" data-type="mirror">Mirror Bars</button>
-            <button class="icon-btn" data-type="wave">Wave</button>
-            <button class="icon-btn" data-type="particles">Particles</button>
+          <!-- Unified Floating Action Button (single FAB + menu) -->
+          <button id="fab-main" class="md-fab" aria-label="Menu" title="Menu">＋</button>
+          <div id="fab-menu" class="md-popmenu" aria-label="Main Menu">
+            <button class="icon-btn" data-action="customize">✎ Customize</button>
+            <button class="icon-btn" data-action="layers">☷ Layers</button>
+            <button class="icon-btn" data-type="circle">＋ Add Circle</button>
+            <button class="icon-btn" data-type="radial">＋ Add Radial Bars</button>
+            <button class="icon-btn" data-type="ring">＋ Add Ring Wave</button>
+            <button class="icon-btn" data-type="bars">＋ Add Bars</button>
+            <button class="icon-btn" data-type="mirror">＋ Add Mirror Bars</button>
+            <button class="icon-btn" data-type="wave">＋ Add Wave</button>
+            <button class="icon-btn" data-type="particles">＋ Add Particles</button>
           </div>
           <div id="viz-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="viz-drawer-title">
             <div class="drawer-head">
@@ -216,9 +217,6 @@
                 <div class="panel layers-panel">
                   <div class="panel-head">
                     <h3>Current Layers</h3>
-                    <div class="panel-actions">
-                      <button id="layers-add-toggle" class="icon-btn" title="Add Layer">＋</button>
-                    </div>
                   </div>
                   <ul id="layers-list" class="layers"></ul>
                 </div>
@@ -401,42 +399,7 @@
 
   
 
-  <!-- Playlist Select Drawer (for actions requiring a target) -->
-  <div id="pl-select-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="pl-select-drawer-title">
-    <div class="drawer-head">
-      <h3 id="pl-select-drawer-title">Select Playlist</h3>
-      <button id="pl-select-close" class="icon-btn" aria-label="Close">✕</button>
-    </div>
-    <div class="drawer-content">
-      <ul id="pl-select-list" class="list"></ul>
-    </div>
-  </div>
-  <div id="pl-select-scrim" class="md-scrim" aria-hidden="tr"></</div>
-
-  <!-- Add to Playlist Drawer -->
- < div id="pl-add-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="pl-add-drawer-title">
-   < div class="drawer-head">
-     < h3 id="pl-add-drawer-title">Add to Playli</sth3>
-     < button id="pl-add-close" class="icon-btn" aria-label="Close"</>✕button>
-  </  div>
-   < div class="drawer-content">
-     < div class="customize">
-       < div class="viz-style">
-         < label>Target Playli</stlabel>
-         < select id="pl-add-targ"></etselect>
-      </  div>
-       < div class="viz-style">
-         < label>Filt</erlabel>
-         < input type="text" id="pl-add-filter" placeholder="Type to filter…"/>
-      </  div>
-       < div class="presets">
-         < button id="pl-add-btn" class="btn primary">Add select</edbutton>
-      </  div>
-       < div class="list" id="pl-add-lib-list" style="max-height:50vh; overflow:au;"></todiv>
-    </  div>
-  </  div> </
- div>
- < div id="pl-add-s>
+  
 
   <footer>
     <p>&copy; 2025 Avee-like Player (PHP)</p>
@@ -444,49 +407,39 @@
 
   
 
-  <script src="assets/js/utils.js?v=20251020-17"></script>
-  <script src="assets/js/equalizer.js?v=20251020-17"></script>
-  <script src="assets/js/visualizer.js?v=20251020-"></</script>
- <<script src="assets/js/playlists.js?v=20251020-17"></script>
-  <script src="assets/js/settings.js?v=20251020-17"></script>
-  <script src="assets/js/cloud.js?v=20251020-17"></script>
-  <script src="assets/js/logger.js?v=20251020-17"></script>
-  <script src="assets/js/toast.js?v=20251020-17"></script>
-  <script src="assets/script.js?v=20251020-17"></script>
+  <!-- Correct script includes (loaded before inline menu logic) -->
+  <script src="assets/js/utils.js?v=20251020-21"></script>
+  <script src="assets/js/equalizer.js?v=20251020-21"></script>
+  <script src="assets/js/visualizer.js?v=20251020-21"></script>
+  <script src="assets/js/playlists.js?v=20251020-21"></script>
+  <script src="assets/js/settings.js?v=20251020-21"></script>
+  <script src="assets/js/cloud.js?v=20251020-21"></script>
+  <script src="assets/js/logger.js?v=20251020-21"></script>
+  <script src="assets/js/toast.js?v=20251020-21"></script>
+  <script src="assets/script.js?v=20251020-21"></script>
+  <script src="assets/js/app.js?v=20251020-21"></script>
   <script>
-    // Drawer open/close handling (customize + layers only)
+    // Unified FAB menu + drawers (no redundant functions)
     (function() {
       function qs(id){ return document.getElementById(id); }
-      const fab = qs('fab-customize');
-      const drawer = qs('viz-drawer');
-      const scrim = qs('viz-scrim');
-      const closeBtn = qs('viz-drawer-close');
 
-      function openDrawer() {
-        if (!drawer) return;
-        drawer.classList.add('open');
-        if (scrim) scrim.classList.add('show');
-      }
-      function closeDrawer() {
-        if (!drawer) return;
-        drawer.classList.remove('open');
-        if (scrim) scrim.classList.remove('show');
-      }
+      // Drawers
+      const vizDrawer = qs('viz-drawer');
+      const vizScrim = qs('viz-scrim');
+      const vizClose = qs('viz-drawer-close');
 
-      if (fab) fab.addEventListener('click', openDrawer);
-      if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
-      if (scrim) scrim.addEventListener('click', closeDrawer);
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          closeDrawer();
-        }
-      });
-
-      // Layers drawer open/close
-      const fabLayers = qs('fab-layers');
       const layersDrawer = qs('layers-drawer');
       const layersScrim = qs('layers-scrim');
       const layersClose = qs('layers-drawer-close');
+
+      function openCustomize() {
+        if (vizDrawer) vizDrawer.classList.add('open');
+        if (vizScrim) vizScrim.classList.add('show');
+      }
+      function closeCustomize() {
+        if (vizDrawer) vizDrawer.classList.remove('open');
+        if (vizScrim) vizScrim.classList.remove('show');
+      }
       function openLayers() {
         if (layersDrawer) layersDrawer.classList.add('open');
         if (layersScrim) layersScrim.classList.add('show');
@@ -497,106 +450,97 @@
         if (layersDrawer) layersDrawer.classList.remove('open');
         if (layersScrim) layersScrim.classList.remove('show');
       }
-      if (fabLayers) fabLayers.addEventListener('click', openLayers);
+
+      if (vizClose) vizClose.addEventListener('click', closeCustomize);
+      if (vizScrim) vizScrim.addEventListener('click', closeCustomize);
       if (layersClose) layersClose.addEventListener('click', closeLayers);
       if (layersScrim) layersScrim.addEventListener('click', closeLayers);
 
-      // Floating add-layer menu
-      const fabAdd = qs('fab-add-layer');
-      const addMenu = qs('layer-type-menu');
-      const layersAddToggle = qs('layers-add-toggle');
+      // Unified FAB + menu
+      const fab = qs('fab-main');
+      const menu = qs('fab-menu');
 
-      function toggleAddMenu(e) {
-        if (e) e.stopPropagation();
-        if (addMenu) addMenu.classList.toggle('open');
+      function toggleMenu() {
+        if (menu) menu.classList.toggle('open');
       }
-      function closeAddMenu() {
-        if (addMenu) addMenu.classList.remove('open');
+      function closeMenu() {
+        if (menu) menu.classList.remove('open');
       }
+
+      if (fab) fab.addEventListener('click', toggleMenu);
+
       function addLayerOfType(type) {
+        if (!window.App || !App.state || !App.state.viz) {
+          console.warn('App not ready yet');
+          try { Toast && Toast.show('App is loading, try again in a second', 'info'); } catch (_) {}
+          return;
+        }
         try {
           const c1 = (qs('viz-color-1')?.value) || '#19d3ae';
           const c2 = (qs('viz-color-2')?.value) || '#1e90ff';
           const seg = Number((qs('viz-segments')?.value) || 4);
-          const blend = 'lighter';
-          const alpha = 1;
           const idx = App.state.viz.addLayer(type, {
             color1: c1, color2: c2,
-            rotation: Number(document.getElementById('viz-rot').value || 0.6),
-            thickness: Number(document.getElementById('viz-thickness').value || 1),
-            ringFloor: Number(document.getElementById('viz-ring-floor').value || 0.16),
-            radialFloor: Number(document.getElementById('viz-radial-floor').value || 0.16),
-            spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),
-            waveScale: Number(document.getElementById('viz-wave-scale').value || 1),
+            rotation: Number(qs('viz-rot')?.value || 0.6),
+            thickness: Number(qs('viz-thickness')?.value || 1),
+            ringFloor: Number(qs('viz-ring-floor')?.value || 0.16),
+            radialFloor: Number(qs('viz-radial-floor')?.value || 0.16),
+            spikeScale: Number(qs('viz-spike-scale')?.value || 1),
+            waveScale: Number(qs('viz-wave-scale')?.value || 1),
             segments: Math.max(1, Math.min(8, seg)),
-            blend,
-            alpha
+            blend: 'lighter',
+            alpha: 1
           });
           App.state.viz.selectLayer(idx);
-          App.renderLayersUI();
-          // Open Layers drawer for immediate customization
+          if (App.renderLayersUI) App.renderLayersUI();
           openLayers();
-          closeAddMenu();
+          closeMenu();
           try { Toast && Toast.show('Layer added', 'success', 1500); } catch (_) {}
-        } catch (err) {
-          console.error('Add layer via menu failed', err);
-          try { Toast && Toast.show('Add layer failed: ' + err.message, 'error'); } catch (_) {}
-        }
-      }
-
-      if (fabAdd) fabAdd.addEventListener('click', toggleAddMenu);
-      if (layersAddToggle) layersAddToggle.addEventListener('click', toggleAddMenu);
-      if (addMenu) {
-        addMenu.querySelectorAll('button[data-type]').forEach(btn => {
-          btn.addEventListener('click', () => addLayerOfType(btn.dataset.type));
-        });
-      }
-      // Close the menu when clicking outside
-      document.addEventListener('click', (e) => {
-        const t = e.target;
-        if (!addMenu) return;
-        if (t === addMenu || addMenu.contains(t) || t === fabAdd || t === layersAddToggle) return;
-        closeAddMenu();
-      });
-
-      // Add Layer via layers drawer with style choice and perf guard
-      const layerAdd2 = qs('layer-add2');
-      if (layerAdd2) layerAdd2.addEventListener('click', () => {
-        try {
-          const style = (qs('layer-style')?.value) || 'circle';
-          const c1 = (qs('layer-color-1')?.value) || '#19d3ae';
-          const c2 = (qs('layer-color-2')?.value) || '#1e90ff';
-          const seg = Number((qs('layer-segments')?.value) || 2);
-          const blend = (qs('layer-blend')?.value) || 'lighter';
-          const alpha = Number((qs('layer-alpha')?.value) || 1);
-          const idx = App.state.viz.addLayer(style, {
-            color1: c1, color2: c2,
-            rotation: Number(document.getElementById('viz-rot').value || 0.6),
-            thickness: Number(document.getElementById('viz-thickness').value || 1),
-            ringFloor: Number(document.getElementById('viz-ring-floor').value || 0.16),
-            radialFloor: Number(document.getElementById('viz-radial-floor').value || 0.16),
-            spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),
-            waveScale: Number(document.getElementById('viz-wave-scale').value || 1),
-            segments: Math.max(1, Math.min(8, seg)),
-            blend,
-            alpha
-          });
-          App.state.viz.selectLayer(idx);
-          App.renderLayersUI();
-          // Performance guard: if more than 1 layer, enforce performance mode and soften trail
-          const count = App.state.viz.getLayers().length;
-          if (count > 1 && App.state.viz.setPerformanceMode) {
-            App.state.viz.setPerformanceMode(true);
-            const perfToggle = document.getElementById('viz-perf'); if (perfToggle) perfToggle.checked = true;
-            if (App.state.viz.setTrailAlpha) App.state.viz.setTrailAlpha(0.05);
-            if (App.state.viz.setGlowStrength) App.state.viz.setGlowStrength(Math.min(12, Number(document.getElementById('viz-glow-strength').value || 12)));
-          }
-          try { Toast && Toast.show('Layer added', 'success', 1500); } catch (_) {}
-          closeLayers();
         } catch (err) {
           console.error('Add layer failed', err);
           try { Toast && Toast.show('Add layer failed: ' + err.message, 'error'); } catch (_) {}
         }
+      }
+
+      // Menu actions
+      if (menu) {
+        menu.addEventListener('click', (e) => {
+          const btn = e.target.closest('button');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const type = btn.dataset.type;
+          if (action === 'customize') {
+            openCustomize();
+          } else if (action === 'layers') {
+            openLayers();
+          } else if (type) {
+            addLayerOfType(type);
+          }
+        });
+      }
+
+      // Close menu when clicking outside
+      document.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!menu) return;
+        if (t === menu || menu.contains(t) || t === fab) return;
+        closeMenu();
+      });
+
+      // Esc key closes drawers and menu
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeCustomize();
+          closeLayers();
+          closeMenu();
+        }
+      });
+
+      // Keep legacy Add Layer (inside Layers drawer) wired to same path
+      const layerAdd2 = qs('layer-add2');
+      if (layerAdd2) layerAdd2.addEventListener('click', () => {
+        const style = (qs('layer-style')?.value) || 'circle';
+        addLayerOfType(style);
       });
     })();
   </script>
