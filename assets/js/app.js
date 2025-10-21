@@ -70,6 +70,8 @@ const App = (() => {
     try { if (window.BUG) BUG.log('ensureAudioContext'); } catch (_) {}
 
     state.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Immediately resume within user gesture to avoid autoplay warnings
+    try { if (state.ctx.state === 'suspended') state.ctx.resume().catch(()=>{}); } catch (_) {}
     state.master = state.ctx.createGain();
     state.eq = new Equalizer(state.ctx);
 
@@ -148,9 +150,13 @@ const App = (() => {
       );
       if (typeof state.viz.setEmphasisMode === 'function') state.viz.setEmphasisMode((document.getElementById('viz-emphasis-mode')?.value) || 'flat');
       if (typeof state.viz.setSmoothing === 'function') state.viz.setSmoothing(Number(document.getElementById('viz-smooth').value || 0.75));
+      // Default performance mode on mobile / coarse pointer devices
+      const mobilePerfDefault = (window.matchMedia && window.matchMedia('(max-width: 900px), (pointer: coarse)').matches);
+      const perfOn = mobilePerfDefault || !!document.getElementById('viz-perf')?.checked;
       if (typeof state.viz.setPerformanceMode === 'function') {
-        const perfOn = !!document.getElementById('viz-perf')?.checked;
         state.viz.setPerformanceMode(perfOn);
+        // reflect in UI if turning on by default
+        const perfToggle = document.getElementById('viz-perf'); if (perfToggle && mobilePerfDefault) perfToggle.checked = true;
         // adjust analyser FFT sizes dynamically
         const fft = perfOn ? 512 : 1024;
         const smooth = perfOn ? 0.7 : 0.75;

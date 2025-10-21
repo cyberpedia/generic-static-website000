@@ -73,9 +73,7 @@
       this.bpmEnabled = false;
       this.bpm = null;
 
-      // Analyzer tuning
-      this.analyser.fftSize = 2048;
-      this.analyser.smoothingTimeConstant = 0.8;
+      // Analyzer tuning: respect external fft/smoothing; set only min/max
       this.analyser.minDecibels = -90;
       this.analyser.maxDecibels = -10;
 
@@ -86,6 +84,9 @@
       // Layer stack
       this.layers = [];
       this.sel = -1;
+
+      // Frame rate (ms between frames) - defaults to ~60fps
+      this.frameIntervalMs = 16;
 
       this.resize();
       window.addEventListener('resize', () => this.resize());
@@ -129,6 +130,8 @@
     setPerformanceMode(on) {
       this.performance = !!on;
       this.maxParticles = this.performance ? 100 : 200;
+      // lower frame rate in performance mode (~30fps), else ~60fps
+      this.frameIntervalMs = this.performance ? 33 : 16;
     }
 
     bins(base) {
@@ -370,12 +373,11 @@
     start() {
       if (this.running) return;
       this.running = true;
-      const loop = () => {
+      let last = 0;
+      const loop = (ts) => {
         if (!this.running) return;
         try {
-          this.draw();
-        } catch (err) {
-          console.error('viz.draw error', err);
+          if (!last || (ts - last  console.error('viz.draw error', err);
           try { if (window.BUG) BUG.error('viz.draw', err); } catch (_) {}
         }
         requestAnimationFrame(loop);
@@ -501,16 +503,17 @@
       this.analyserL = anL || null;
       this.analyserR = anR || null;
       if (this.analyserL) {
-        this.analyserL.fftSize = 2048;
-        this.analyserL.smoothingTimeConstant = 0.8;
+        // match main analyser characteristics to avoid heavy reconfiguration
+        this.analyserL.fftSize = this.analyser.fftSize;
+        this.analyserL.smoothingTimeConstant = this.analyser.smoothingTimeConstant;
         this.analyserL.minDecibels = -90;
         this.analyserL.maxDecibels = -10;
         this.freqFloatL = new Float32Array(this.analyserL.frequencyBinCount);
         this.timeDataL = new Uint8Array(this.analyserL.frequencyBinCount);
       }
       if (this.analyserR) {
-        this.analyserR.fftSize = 2048;
-        this.analyserR.smoothingTimeConstant = 0.8;
+        this.analyserR.fftSize = this.analyser.fftSize;
+        this.analyserR.smoothingTimeConstant = this.analyser.smoothingTimeConstant;
         this.analyserR.minDecibels = -90;
         this.analyserR.maxDecibels = -10;
         this.freqFloatR = new Float32Array(this.analyserR.frequencyBinCount);
