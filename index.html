@@ -289,45 +289,7 @@
           </div>
           <div id="layers-scrim" class="md-scrim" aria-hidden="true"></div>
 
-          <!-- Smart Playlist Drawer -->
-          <div id="smart-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="smart-drawer-title">
-            <div class="drawer-head">
-              <h3 id="smart-drawer-title">Create Smart Playlist</h3>
-              <button id="smart-drawer-close" class="icon-btn" aria-label="Close">✕</button>
-            </div>
-            <div class="drawer-content">
-              <div class="customize">
-                <div class="viz-style">
-                  <label>Name</label>
-                  <input type="text" id="smart-name2" placeholder="Smart playlist name"/>
-                </div>
-                <div class="viz-style">
-                  <label>Name contains</label>
-                  <input type="text" id="smart-contains2" placeholder="Substring"/>
-                </div>
-                <div class="viz-style">
-                  <label>Extensions</label>
-                  <input type="text" id="smart-exts2" placeholder="e.g. mp3,ogg"/>
-                </div>
-                <div class="viz-style">
-                  <label>Folder prefix</label>
-                  <input type="text" id="smart-folder2" placeholder="assets/music/subfolder"/>
-                </div>
-                <div class="viz-style">
-                  <label>Min MB</label>
-                  <input type="number" id="smart-minmb2" min="0" placeholder="0"/>
-                </div>
-                <div class="viz-style">
-                  <label>Max MB</label>
-                  <input type="number" id="smart-maxmb2" min="0" placeholder="0"/>
-                </div>
-                <div class="presets">
-                  <button id="smart-create-btn" class="btn primary">Create Smart</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div id="smart-scrim" class="md-scrim" aria-hidden="true"></div>
+          
 
           <div class="eq-header">
             <span>Equalizer</span>
@@ -410,29 +372,9 @@
     </div>
   </main>
 
-  <!-- Speed Dial (Quick Add) -->
-  <div id="speed-dial" class="md-speed-dial" aria-label="Quick actions">
-    <button id="sd-toggle" class="md-fab" title="Quick actions">＋</button>
-    <div class="dial-items">
-      <button id="sd-add-playlist" class="icon-btn" title="Add Playlist">📝</button>
-      <button id="sd-add-smart" class="icon-btn" title="Add Smart Playlist">⚙️</button>
-      <button id="sd-add-to-pl" class="icon-btn" title="Add to Playlist">➕📄</button>
-      <button id="sd-add-current" class="icon-btn" title="Add Current Track">➕🎵</button>
-      <button id="sd-del-playlist" class="icon-btn danger" title="Delete Selected Playlist">🗑</button>
-    </div>
-  </div>
+  
 
-  <!-- Floating Tools: search/upload/import/rescan -->
-  <div id="float-tools" class="md-float-tools" aria-label="Library tools">
-    <input type="text" id="float-search" placeholder="Search…" />
-    <button id="float-rescan" class="btn secondary">Rescan</button>
-    <label class="upload-btn" title="Upload audio files">
-      Upload
-      <input type="file" id="float-upload-input" accept="audio/*" multiple />
-    </label>
-    <input type="url" id="float-import-url" placeholder="Import URL" />
-    <button id="float-import-btn" class="btn secondary">Import</button>
-  </div>
+  
 
   <!-- Upload progress overlay -->
   <div id="upload-overlay" class="md-overlay" aria-hidden="true">
@@ -442,30 +384,7 @@
     </div>
   </div>
 
-  <!-- Playlist Create Drawer -->
-  <div id="playlist-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="playlist-drawer-title">
-    <div class="drawer-head">
-      <h3 id="playlist-drawer-title">Create Playlist</h3>
-      <button id="playlist-drawer-close" class="icon-btn" aria-label="Close">✕</button>
-    </div>
-    <div class="drawer-content">
-      <div class="customize">
-        <div class="viz-style">
-          <label>Name</label>
-          <input type="text" id="pl-name2" placeholder="Playlist name"/>
-        </div>
-        <div class="viz-style">
-          <label>Filter</label>
-          <input type="text" id="pl-filter" placeholder="Type to filter…"/>
-        </div>
-        <div class="presets">
-          <button id="pl-create-btn" class="btn primary">Create with selected</button>
-        </div>
-        <div class="list" id="pl-lib-list" style="max-height:50vh; overflow:auto;"></div>
-      </div>
-    </div>
-  </div>
-  <div id="playlist-scrim" class="md-scrim" aria-hidden="true"></div>
+  
 
   <!-- Playlist Select Drawer (for actions requiring a target) -->
   <div id="pl-select-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="pl-select-drawer-title">
@@ -520,14 +439,14 @@
   <script src="assets/js/toast.js?v=20251020-17"></script>
   <script src="assets/script.js?v=20251020-17"></script>
   <script>
-    // Drawer open/close handling + top menu + speed dial
+    // Drawer open/close handling (customize + layers only)
     (function() {
       function qs(id){ return document.getElementById(id); }
       const fab = qs('fab-customize');
       const drawer = qs('viz-drawer');
       const scrim = qs('viz-scrim');
       const closeBtn = qs('viz-drawer-close');
-      
+
       function openDrawer() {
         if (!drawer) return;
         drawer.classList.add('open');
@@ -545,130 +464,6 @@
       window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           closeDrawer();
-        }
-      });
-
-      
-
-      // Speed Dial: quick add playlist
-      const sd = qs('speed-dial');
-      const sdToggle = qs('sd-toggle');
-      const sdAdd = qs('sd-add-playlist');
-      const sdAddSmart = qs('sd-add-smart');
-      if (sdToggle) sdToggle.addEventListener('click', () => {
-        if (!sd) return;
-        sd.classList.toggle('open');
-      });
-      if (sdAdd) sdAdd.addEventListener('click', () => {
-        if (sd) sd.classList.remove('open');
-        const d = document.getElementById('playlist-drawer');
-        const s = document.getElementById('playlist-scrim');
-        if (d) d.classList.add('open');
-        if (s) s.classList.add('show');
-        if (window.App && App.populatePlaylistCreateList) {
-          App.populatePlaylistCreateList('');
-        }
-      });
-      if (sdAddSmart) sdAddSmart.addEventListener('click', () => {
-        const sd = qs('speed-dial');
-        if (sd) sd.classList.remove('open');
-        const d = qs('smart-drawer'), s = qs('smart-scrim');
-        if (d) d.classList.add('open');
-        if (s) s.classList.add('show');
-      });
-
-      // Add to Playlist: open drawer and populate playlists + library
-      const sdAddTo = qs('sd-add-to-pl');
-      if (sdAddTo) sdAddTo.addEventListener('click', async () => {
-        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
-        const d = qs('pl-add-drawer'), s = qs('pl-add-scrim');
-        if (d) d.classList.add('open');
-        if (s) s.classList.add('show');
-        // populate playlist target select
-        try {
-          const data = await API.get('api/playlists.php');
-          const sel = qs('pl-add-target');
-          if (sel) {
-            sel.innerHTML = '';
-            (data.playlists || []).forEach(pl => {
-              const opt = document.createElement('option');
-              opt.value = pl.id;
-              opt.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
-              sel.appendChild(opt);
-            });
-          }
-        } catch (_) {}
-        // populate library checkboxes
-        try {
-          if (window.App && App.state && Array.isArray(App.state.library)) {
-            const listBox = qs('pl-add-lib-list');
-            const filter = qs('pl-add-filter');
-            function render(filterText) {
-              if (!listBox) return;
-              listBox.innerHTML = '';
-              const q = String(filterText || '').toLowerCase();
-              const src = q ? App.state.library.filter(it => (it.name || '').toLowerCase().includes(q)) : App.state.library;
-              src.forEach(it => {
-                const row = document.createElement('div');
-                row.style.display = 'flex';
-                row.style.alignItems = 'center';
-                row.style.justifyContent = 'space-between';
-                row.style.padding = '6px 8px';
-                row.style.borderBottom = '1px dashed #2a3350';
-                const lbl = document.createElement('label');
-                lbl.style.display = 'inline-flex';
-                lbl.style.alignItems = 'center';
-                lbl.style.gap = '8px';
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.value = it.path;
-                const name = document.createElement('span');
-                name.textContent = it.name;
-                lbl.appendChild(cb);
-                lbl.appendChild(name);
-                row.appendChild(lbl);
-                listBox.appendChild(row);
-              });
-            }
-            render('');
-            if (filter) {
-              filter.oninput = () => render(filter.value);
-            }
-          }
-        } catch (_) {}
-      });
-      const plAddClose = qs('pl-add-close');
-      const plAddScrim = qs('pl-add-scrim');
-      if (plAddClose) plAddClose.addEventListener('click', () => { qs('pl-add-drawer').classList.remove('open'); plAddScrim.classList.remove('show'); });
-      if (plAddScrim) plAddScrim.addEventListener('click', () => { qs('pl-add-drawer').classList.remove('open'); plAddScrim.classList.remove('show'); });
-      const plAddBtn = qs('pl-add-btn');
-      if (plAddBtn) plAddBtn.addEventListener('click', async () => {
-        try {
-          const targetSel = qs('pl-add-target');
-          const targetId = targetSel ? targetSel.value : null;
-          if (!targetId) { try { Toast && Toast.show('Select a playlist', 'error'); } catch (_) {} return; }
-          const box = qs('pl-add-lib-list');
-          const cbs = box ? Array.from(box.querySelectorAll('input[type=\"checkbox\"]')).filter(cb => cb.checked) : [];
-          if (cbs.length === 0) { try { Toast && Toast.show('Select tracks', 'error'); } catch (_) {} return; }
-          const tracks = cbs.map(cb => {
-            const p = String(cb.value || '');
-            const item = (window.App && App.state && Array.isArray(App.state.library)) ? App.state.library.find(it => it.path === p) : null;
-            return item ? { path: item.path, name: item.name } : { path: p, name: p.split('/').pop() };
-          });
-          const res = await API.post('api/playlists.php', { action: 'add_tracks_bulk', id: targetId, tracks });
-          if (res.ok) {
-            const name = (res.playlist && res.playlist.name) ? res.playlist.name : (document.getElementById('playlist-title')?.textContent || 'Playlist');
-            try { Toast && Toast.show(`Added ${tracks.length} track(s) to \"${name}\"`, 'success'); } catch (_) {}
-            const d = qs('pl-add-drawer'), s = qs('pl-add-scrim');
-            if (d) d.classList.remove('open');
-            if (s) s.classList.remove('show');
-            if (window.PlaylistUI && PlaylistUI.selectPlaylist) PlaylistUI.selectPlaylist(targetId);
-          } else {
-            try { Toast && Toast.show(res.error || 'Add failed', 'error'); } catch (_) {}
-          }
-        } catch (err) {
-          console.error('Add to playlist failed', err);
-          try { Toast && Toast.show('Add failed: ' + err.message, 'error'); } catch (_) {}
         }
       });
 
@@ -690,109 +485,6 @@
       if (fabLayers) fabLayers.addEventListener('click', openLayers);
       if (layersClose) layersClose.addEventListener('click', closeLayers);
       if (layersScrim) layersScrim.addEventListener('click', closeLayers);
-
-      // Smart drawer close + create
-      const smartDrawer = qs('smart-drawer');
-      const smartScrim = qs('smart-scrim');
-      const smartClose = qs('smart-drawer-close');
-      if (smartClose) smartClose.addEventListener('click', () => { smartDrawer.classList.remove('open'); smartScrim.classList.remove('show'); });
-      if (smartScrim) smartScrim.addEventListener('click', () => { smartDrawer.classList.remove('open'); smartScrim.classList.remove('show'); });
-      const smartCreate = qs('smart-create-btn');
-      if (smartCreate) smartCreate.addEventListener('click', async () => {
-        const name = (qs('smart-name2').value || '').trim();
-        const contains = (qs('smart-contains2').value || '').trim();
-        const exts = (qs('smart-exts2').value || '').trim().toLowerCase();
-        const folder = (qs('smart-folder2').value || '').trim();
-        const minMb = Number(qs('smart-minmb2').value || '0');
-        const maxMb = Number(qs('smart-maxmb2').value || '0');
-        if (!name) { try { Toast && Toast.show('Enter smart playlist name', 'error'); } catch (_) {} return; }
-        const rules = {
-          contains,
-          exts: exts ? exts.split(',').map(s => s.trim()).filter(Boolean) : [],
-          folder,
-          minBytes: minMb > 0 ? Math.round(minMb * 1024 * 1024) : 0,
-          maxBytes: maxMb > 0 ? Math.round(maxMb * 1024 * 1024) : 0
-        };
-        try {
-          if (window.PlaylistUI && PlaylistUI.createSmartByNameAndRules) {
-            const res = await PlaylistUI.createSmartByNameAndRules(name, rules);
-            if (res.ok) {
-              try { Toast && Toast.show('Smart playlist created', 'success'); } catch (_) {}
-              smartDrawer.classList.remove('open'); smartScrim.classList.remove('show');
-            } else {
-              try { Toast && Toast.show(res.error || 'Failed to create', 'error'); } catch (_) {}
-            }
-          } else {
-            const res = await API.post('api/playlists.php', { action: 'create_smart', name, rules });
-            if (res.ok) {
-              try { Toast && Toast.show('Smart playlist created', 'success'); } catch (_) {}
-              if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
-              smartDrawer.classList.remove('open'); smartScrim.classList.remove('show');
-            } else {
-              try { Toast && Toast.show(res.error || 'Failed to create', 'error'); } catch (_) {}
-            }
-          }
-        } catch (err) {
-          console.error('Create smart error', err);
-          try { Toast && Toast.show('Create failed: ' + err.message, 'error'); } catch (_) {}
-        }
-      });
-
-      // Speed Dial extra actions: add current / delete selected / open layers
-      const sdAddCurrent = qs('sd-add-current');
-      if (sdAddCurrent) sdAddCurrent.addEventListener('click', async () => {
-        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
-        try {
-          const selId = (typeof PlaylistUI !== 'undefined' && PlaylistUI.getSelectedId) ? PlaylistUI.getSelectedId() : null;
-          if (!selId) {
-            // open select drawer and then add current to chosen playlist
-            App.openPlaylistSelect(async (id, name) => {
-              if (PlaylistUI.selectPlaylist) await PlaylistUI.selectPlaylist(id);
-              if (PlaylistUI.addCurrent) await PlaylistUI.addCurrent();
-              try { Toast && Toast.show(`Added current track to "${name}"`, 'success'); } catch (_) {}
-            });
-            return;
-          }
-          if (PlaylistUI.addCurrent) {
-            await PlaylistUI.addCurrent();
-            const plName = document.getElementById('playlist-title')?.textContent || 'Playlist';
-            try { Toast && Toast.show(`Added current track to "${plName}"`, 'success'); } catch (_) {}
-          }
-        } catch (err) {
-          console.error('Add current failed', err);
-          try { Toast && Toast.show('Add failed: ' + err.message, 'error'); } catch (_) {}
-        }
-      });
-      const sdDelPl = qs('sd-del-playlist');
-      if (sdDelPl) sdDelPl.addEventListener('click', async () => {
-        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
-        const ok = window.confirm('Delete selected playlist?');
-        if (!ok) return;
-        try {
-          const selId = (typeof PlaylistUI !== 'undefined' && PlaylistUI.getSelectedId) ? PlaylistUI.getSelectedId() : null;
-          if (!selId) {
-            App.openPlaylistSelect(async (id, name) => {
-              await API.post('api/playlists.php', { action: 'delete', id });
-              if (PlaylistUI.loadPlaylists) await PlaylistUI.loadPlaylists();
-              try { Toast && Toast.show(`Deleted "${name}"`, 'success'); } catch (_) {}
-            });
-            return;
-          }
-          const plName = document.getElementById('playlist-title')?.textContent || 'Playlist';
-          if (PlaylistUI.deleteSelected) {
-            await PlaylistUI.deleteSelected();
-            try { Toast && Toast.show(`Deleted "${plName}"`, 'success'); } catch (_) {}
-          }
-        } catch (err) {
-          console.error('Delete playlist failed', err);
-          try { Toast && Toast.show('Delete failed: ' + err.message, 'error'); } catch (_) {}
-        }
-      });
-      const sdLayers = qs('sd-open-layers');
-      if (sdLayers) sdLayers.addEventListener('click', () => {
-        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
-        openLayers();
-      });
 
       // Add Layer via layers drawer with style choice and perf guard
       const layerAdd2 = qs('layer-add2');

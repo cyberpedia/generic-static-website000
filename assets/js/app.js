@@ -704,97 +704,7 @@ ${item.name}`);
 
   function bindUI() {
 
-    // Playlist Create drawer handlers (name + multi-select library)
-    const plDrawer = document.getElementById('playlist-drawer');
-    const plScrim = document.getElementById('playlist-scrim');
-    const plClose = document.getElementById('playlist-drawer-close');
-    const plCreateBtn = document.getElementById('pl-create-btn');
-    const plFilter = document.getElementById('pl-filter');
-
-    function closePlDrawer() {
-      if (plDrawer) plDrawer.classList.remove('open');
-      if (plScrim) plScrim.classList.remove('show');
-    }
-
-    if (plClose) plClose.addEventListener('click', closePlDrawer);
-    if (plScrim) plScrim.addEventListener('click', closePlDrawer);
-
-    if (plFilter) {
-      plFilter.addEventListener('input', () => {
-        populatePlaylistCreateList(plFilter.value);
-      });
-    }
-
-    if (plCreateBtn) {
-      plCreateBtn.addEventListener('click', async () => {
-        const name = (document.getElementById('pl-name2')?.value || '').trim();
-        if (!name) { notify('Enter playlist name', 'error'); return; }
-        // gather selected tracks
-        const list = document.getElementById('pl-lib-list');
-        const checks = list ? Array.from(list.querySelectorAll('input[type="checkbox"]:checked')) : [];
-        const tracks = checks.map(ch => {
-          const idx = Number(ch.dataset.index || '-1');
-          const it = state.library[idx];
-          return it ? { path: it.path, name: it.name } : null;
-        }).filter(Boolean);
-        try {
-          const res = await API.post('api/playlists.php', { action: 'create', name });
-          if (!res.ok) { notify(res.error || 'Failed to create', 'error'); return; }
-          const id = res.playlist.id;
-          if (tracks.length) {
-            const r2 = await API.post('api/playlists.php', { action: 'add_tracks_bulk', id, tracks });
-            if (!r2.ok) { notify(r2.error || 'Failed adding tracks', 'error'); }
-          }
-          // Refresh playlists and select the new one
-          if (typeof PlaylistUI !== 'undefined' && PlaylistUI.loadPlaylists) {
-            await PlaylistUI.loadPlaylists();
-            if (PlaylistUI.selectPlaylist) await PlaylistUI.selectPlaylist(id);
-          }
-          notify('Playlist created', 'success');
-          closePlDrawer();
-        } catch (err) {
-          notify('Create failed: ' + err.message, 'error');
-        }
-      });
-    }
-
-    // Playlist Select drawer (for add/delete actions when none selected)
-    const plSelDrawer = document.getElementById('pl-select-drawer');
-    const plSelScrim = document.getElementById('pl-select-scrim');
-    const plSelClose = document.getElementById('pl-select-close');
-
-    function openPlaylistSelect(onChoose) {
-      (async () => {
-        try {
-          const data = await API.get('api/playlists.php');
-          const ul = document.getElementById('pl-select-list');
-          if (ul) {
-            ul.innerHTML = '';
-            (data.playlists || []).forEach(pl => {
-              const li = document.createElement('li');
-              li.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
-              li.addEventListener('click', async () => {
-                if (onChoose) await onChoose(pl.id);
-                closePlSelect();
-              });
-              ul.appendChild(li);
-            });
-          }
-          if (plSelDrawer) plSelDrawer.classList.add('open');
-          if (plSelScrim) plSelScrim.classList.add('show');
-        } catch (err) {
-          notify('Failed to load playlists', 'error');
-        }
-      })();
-    }
-
-    function closePlSelect() {
-      if (plSelDrawer) plSelDrawer.classList.remove('open');
-      if (plSelScrim) plSelScrim.classList.remove('show');
-    }
-
-    if (plSelClose) plSelClose.addEventListener('click', closePlSelect);
-    if (plSelScrim) plSelScrim.addEventListener('click', closePlSelect);
+    
 
     document.getElementById('play').addEventListener('click', async () => {
       ensureAudioContext();
@@ -1647,7 +1557,7 @@ ${state.currentTrack.name || state.currentTrack.path}`);
         if (d) d.classList.add('open');
         if (s) s.classList.add('show');
         syncLayerEditForm();
-     _code }new)</;
+      });
 
       const trash = document.createElement('button');
       trash.className = 'trash btn danger';
@@ -1774,7 +1684,7 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     }
   }
 
-  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, populatePlaylistCreateList, openPlaylistSelect, ensureAudioContext, syncLayerEditForm };
+  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, ensureAudioContext, syncLayerEditFor_codeelect, ensureAudioContext, syncLayerEditForm };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
