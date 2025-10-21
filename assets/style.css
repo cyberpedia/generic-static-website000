@@ -267,6 +267,29 @@ footer {
 }
 .md-fab:hover { background: #2a73d8; }
 #fab-layers { bottom: 152px; }
+#fab-add-layer { bottom: 216px; }
+
+/* Popover menu for adding layers */
+.md-popmenu {
+  position: fixed;
+  right: 16px;
+  bottom: 216px;
+  z-index: 1110;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--md-panel);
+  border: 1px solid var(--md-panel-border);
+  box-shadow: 0 16px 40px var(--md-shadow);
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+.md-popmenu.open { display: flex; }
+.md-popmenu .icon-btn {
+  min-width: 160px;
+  justify-content: flex-start;
+  gap: 8px;
+}
 
 /* Floating Tools Panel */
 .md-float-tools {

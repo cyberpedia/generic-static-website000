@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Avee-like Media Player (PHP/XAMPP)</title>
-  <link rel="stylesheet" href="assets/style.css?v=20251020-20">
+  <link rel="stylesheet" href="assets/style.css?v=20251020-21">
   
   <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
@@ -90,6 +90,16 @@
           <!-- Floating Customize button + drawer -->
           <button id="fab-customize" class="md-fab" aria-label="Customize visualizer" title="Customize">✎</button>
           <button id="fab-layers" class="md-fab" aria-label="Layers" title="Layers">☷</button>
+          <button id="fab-add-layer" class="md-fab" aria-label="Add Layer" title="Add Layer">＋</button>
+          <div id="layer-type-menu" class="md-popmenu" aria-label="Add Layer Menu">
+            <button class="icon-btn" data-type="circle">Circle</button>
+            <button class="icon-btn" data-type="radial">Radial Bars</button>
+            <button class="icon-btn" data-type="ring">Ring Wave</button>
+            <button class="icon-btn" data-type="bars">Bars</button>
+            <button class="icon-btn" data-type="mirror">Mirror Bars</button>
+            <button class="icon-btn" data-type="wave">Wave</button>
+            <button class="icon-btn" data-type="particles">Particles</button>
+          </div>
           <div id="viz-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="viz-drawer-title">
             <div class="drawer-head">
               <h3 id="viz-drawer-title">Customize Visualizer</h3>
@@ -204,7 +214,12 @@
               <div class="customize">
 
                 <div class="panel layers-panel">
-                  <div class="panel-head"><h3>Current Layers</h3></div>
+                  <div class="panel-head">
+                    <h3>Current Layers</h3>
+                    <div class="panel-actions">
+                      <button id="layers-add-toggle" class="icon-btn" title="Add Layer">＋</button>
+                    </div>
+                  </div>
                   <ul id="layers-list" class="layers"></ul>
                 </div>
 
@@ -485,6 +500,64 @@
       if (fabLayers) fabLayers.addEventListener('click', openLayers);
       if (layersClose) layersClose.addEventListener('click', closeLayers);
       if (layersScrim) layersScrim.addEventListener('click', closeLayers);
+
+      // Floating add-layer menu
+      const fabAdd = qs('fab-add-layer');
+      const addMenu = qs('layer-type-menu');
+      const layersAddToggle = qs('layers-add-toggle');
+
+      function toggleAddMenu(e) {
+        if (e) e.stopPropagation();
+        if (addMenu) addMenu.classList.toggle('open');
+      }
+      function closeAddMenu() {
+        if (addMenu) addMenu.classList.remove('open');
+      }
+      function addLayerOfType(type) {
+        try {
+          const c1 = (qs('viz-color-1')?.value) || '#19d3ae';
+          const c2 = (qs('viz-color-2')?.value) || '#1e90ff';
+          const seg = Number((qs('viz-segments')?.value) || 4);
+          const blend = 'lighter';
+          const alpha = 1;
+          const idx = App.state.viz.addLayer(type, {
+            color1: c1, color2: c2,
+            rotation: Number(document.getElementById('viz-rot').value || 0.6),
+            thickness: Number(document.getElementById('viz-thickness').value || 1),
+            ringFloor: Number(document.getElementById('viz-ring-floor').value || 0.16),
+            radialFloor: Number(document.getElementById('viz-radial-floor').value || 0.16),
+            spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),
+            waveScale: Number(document.getElementById('viz-wave-scale').value || 1),
+            segments: Math.max(1, Math.min(8, seg)),
+            blend,
+            alpha
+          });
+          App.state.viz.selectLayer(idx);
+          App.renderLayersUI();
+          // Open Layers drawer for immediate customization
+          openLayers();
+          closeAddMenu();
+          try { Toast && Toast.show('Layer added', 'success', 1500); } catch (_) {}
+        } catch (err) {
+          console.error('Add layer via menu failed', err);
+          try { Toast && Toast.show('Add layer failed: ' + err.message, 'error'); } catch (_) {}
+        }
+      }
+
+      if (fabAdd) fabAdd.addEventListener('click', toggleAddMenu);
+      if (layersAddToggle) layersAddToggle.addEventListener('click', toggleAddMenu);
+      if (addMenu) {
+        addMenu.querySelectorAll('button[data-type]').forEach(btn => {
+          btn.addEventListener('click', () => addLayerOfType(btn.dataset.type));
+        });
+      }
+      // Close the menu when clicking outside
+      document.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!addMenu) return;
+        if (t === addMenu || addMenu.contains(t) || t === fabAdd || t === layersAddToggle) return;
+        closeAddMenu();
+      });
 
       // Add Layer via layers drawer with style choice and perf guard
       const layerAdd2 = qs('layer-add2');
