@@ -310,6 +310,11 @@ footer {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+  cursor: grab;
+  user-select: none;
+}
+.md-float-layers.dragging .panel-head {
+  cursor: grabbing;
 }
 .md-float-layers .panel-head h3 {
   margin: 0;

@@ -45,9 +45,11 @@ const App = (() => {
     // Ensure debug panel is visible
     try { if (window.BUG) { BUG.show(); BUG.log('App.init'); } } catch (_) {}
 
-    // Create AudioContext immediately so visualizer shows (audio won't play until user interacts)
+    // Bind UI; defer AudioContext creation until first user gesture
     bindUI();
-    ensureAudioContext();
+    document.addEventListener('pointerdown', () => {
+      try { ensureAudioContext(); } catch (_) {}
+    }, { once: true });
     await loadLibrary();
     try { if (typeof PlaylistUI !== 'undefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (_) {}
 
@@ -1603,6 +1605,8 @@ ${state.currentTrack.name || state.currentTrack.path}`);
           const s = document.getElementById('layers-scrim');
           if (d) d.classList.add('open');
           if (s) s.classList.add('show');
+          // Isolate selected layer during editing to prevent distraction
+          try { isolateSelectedLayer(true); } catch (_) {}
           syncLayerEditForm();
         });
 
@@ -1711,6 +1715,34 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     } catch (_) {}
   }
 
+  // Isolate selected layer: hides other layers while editing to prevent distraction
+  const isolateState = { active: false, prev: null };
+  function isolateSelectedLayer(on) {
+    if (!state.viz) return;
+    const layers = state.viz.getLayers();
+    if (!Array.isArray(layers) || layers.length === 0) return;
+    if (on) {
+      if (isolateState.active) return;
+      isolateState.prev = layers.map(L => (L.visible !== false));
+      isolateState.active = true;
+      const sel = state.viz.sel;
+      layers.forEach((L, i) => {
+        const visible = (i === sel) ? true : false;
+        state.viz.setLayerVisible(i, visible);
+      });
+      renderLayersUI();
+    } else {
+      if (!isolateState.active || !isolateState.prev) return;
+      layers.forEach((L, i) => {
+        const v = !!isolateState.prev[i];
+        state.viz.setLayerVisible(i, v);
+      });
+      isolateState.prev = null;
+      isolateState.active = false;
+      renderLayersUI();
+    }
+  }
+
   // Populate Playlist Create drawer list from library
   function populatePlaylistCreateList(filter = '') {
     const container = document.getElementById('pl-lib-list');
@@ -1779,7 +1811,7 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     }
   }
 
-  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, ensureAudioContext, syncLayerEditForm };
+  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, ensureAudioContext, syncLayerEditForm, isolateSelectedLayer };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -232,43 +232,7 @@
                   <ul id="layers-list" class="layers"></ul>
                 </div>
 
-                <div class="panel">
-                  <div class="panel-head"><h3>Add Layer</h3></div>
-                  <div class="viz-style">
-                    <label>Layer Style</label>
-                    <select id="layer-style">
-                      <option value="bars">Bars</option>
-                      <option value="wave">Wave</option>
-                      <option value="mirror">Mirror Bars</option>
-                      <option value="ring">Ring Wave</option>
-                      <option value="radial">Radial Bars</option>
-                      <option value="particles">Particles</option>
-                      <option value="circle">Circle</option>
-                      <option value="image">Image</option>
-                      <option value="background">Background</option>
-                    </select>
-                  </div>
-                  <div class="viz-colors">
-                    <label>Colors</label>
-                    <input type="color" id="layer-color-1" value="#19d3ae"/>
-                    <input type="color" id="layer-color-2" value="#1e90ff"/>
-                  </div>
-                  <div class="viz-tuning">
-                    <label>Segments <input type="range" id="layer-segments" min="1" max="8" step="1" value="2"></label>
-                    <label>Blend Mode
-                      <select id="layer-blend">
-                        <option value="lighter" selected>Lighter</option>
-                        <option value="normal">Normal</option>
-                        <option value="screen">Screen</option>
-                        <option value="multiply">Multiply</option>
-                      </select>
-                    </label>
-                    <label>Opacity <input type="range" id="layer-alpha" min="0" max="1" step="0.05" value="1"></label>
-                  </div>
-                  <div class="presets">
-                    <button id="layer-add2" class="btn primary">Add Layer</button>
-                  </div>
-                </div>
+                
 
                 <div class="panel">
                   <div class="panel-head"><h3>Edit Selected Layer</h3></div>
@@ -466,10 +430,14 @@
         if (layersScrim) layersScrim.classList.add('show');
         try { if (window.App && App.renderLayersUI) App.renderLayersUI(); } catch (_) {}
         try { if (window.App && App.syncLayerEditForm) App.syncLayerEditForm(); } catch (_) {}
+        // Isolate selected layer during editing
+        try { if (window.App && App.isolateSelectedLayer) App.isolateSelectedLayer(true); } catch (_) {}
       }
       function closeLayersDrawer() {
         if (layersDrawer) layersDrawer.classList.remove('open');
         if (layersScrim) layersScrim.classList.remove('show');
+        // Restore visibility of other layers
+        try { if (window.App && App.isolateSelectedLayer) App.isolateSelectedLayer(false); } catch (_) {}
       }
       if (layersClose) layersClose.addEventListener('click', closeLayersDrawer);
       if (layersScrim) layersScrim.addEventListener('click', closeLayersDrawer);
@@ -500,6 +468,59 @@
         if (menu) menu.classList.remove('open');
       }
       if (addBtn) addBtn.addEventListener('click', toggleMenu);
+
+      // Make floating Layers panel draggable by holding the header
+      (function makeDraggable() {
+        if (!panel) return;
+        const head = panel.querySelector('.panel-head');
+        if (!head) return;
+        const saved = localStorage.getItem('layersPanelPos');
+        if (saved) {
+          try {
+            const p = JSON.parse(saved);
+            if (typeof p.left === 'number' && typeof p.top === 'number') {
+              panel.style.left = p.left + 'px';
+              panel.style.top = p.top + 'px';
+              panel.style.right = 'auto';
+              panel.style.bottom = 'auto';
+            }
+          } catch (_) {}
+        }
+        let dragging = false;
+        let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+        function onDown(e) {
+          e.preventDefault();
+          const rect = panel.getBoundingClientRect();
+          startLeft = rect.left;
+          startTop = rect.top;
+          startX = e.clientX;
+          startY = e.clientY;
+          dragging = true;
+          panel.classList.add('dragging');
+          panel.style.left = startLeft + 'px';
+          panel.style.top = startTop + 'px';
+          panel.style.right = 'auto';
+          panel.style.bottom = 'auto';
+          document.addEventListener('pointermove', onMove);
+          document.addEventListener('pointerup', onUp, { once: true });
+        }
+        function onMove(e) {
+          if (!dragging) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          panel.style.left = (startLeft + dx) + 'px';
+          panel.style.top = (startTop + dy) + 'px';
+        }
+        function onUp() {
+          dragging = false;
+          panel.classList.remove('dragging');
+          document.removeEventListener('pointermove', onMove);
+          // save position
+          const rect = panel.getBoundingClientRect();
+          try { localStorage.setItem('layersPanelPos', JSON.stringify({ left: rect.left, top: rect.top })); } catch (_) {}
+        }
+        head.addEventListener('pointerdown', onDown);
+      })();
 
       function addLayerOfType(type) {
         if (!window.App) {
@@ -573,7 +594,7 @@
         if (e.key === 'Escape') { closeMenu(); closePanel(); closeLayersDrawer(); }
       });
 
-      // Keep "Add Layer" inside Layers drawer wired to same add function
+      }) Keep "Add Layer" inside Layers drawer wired to same add function
       const layerAdd2 = qs('layer-add2');
       if (layerAdd2) layerAdd2.addEventListener('click', () => {
         const style = (qs('layer-style')?.value) || 'circle';
