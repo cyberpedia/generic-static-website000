@@ -24,46 +24,66 @@
 
     function renderPlaylists(playlists) {
       const ul = document.getElementById('playlists');
-      ul.innerHTML = '';
-      playlists.forEach(pl => {
-        const li = document.createElement('li');
-        li.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
-        li.dataset.id = pl.id;
-        li.addEventListener('click', () => selectPlaylist(pl.id));
-        if (pl.id === state.selectedId) li.classList.add('active');
-        ul.appendChild(li);
-      });
-      if (!state.selectedId && playlists.length > 0) selectPlaylist(playlists[0].id);
+      if (ul) {
+        ul.innerHTML = '';
+        playlists.forEach(pl => {
+          const li = document.createElement('li');
+          li.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
+          li.dataset.id = pl.id;
+          li.addEventListener('click', () => selectPlaylist(pl.id));
+          if (pl.id === state.selectedId) li.classList.add('active');
+          ul.appendChild(li);
+        });
+        if (!state.selectedId && playlists.length > 0) selectPlaylist(playlists[0].id);
+      }
+      // also render in top-menu if present
+      const menuUl = document.getElementById('menu-playlists');
+      if (menuUl) {
+        menuUl.innerHTML = '';
+        playlists.forEach(pl => {
+          const li = document.createElement('li');
+          li.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
+          li.dataset.id = pl.id;
+          li.addEventListener('click', () => {
+            selectPlaylist(pl.id);
+            const panel = document.getElementById('top-menu-panel');
+            if (panel) panel.classList.remove('open');
+          });
+          menuUl.appendChild(li);
+        });
+      }
     }
 
     async function selectPlaylist(id) {
       state.selectedId = id;
       const data = await API.get('api/playlists.php', { id });
-      document.getElementById('playlist-title').textContent = data.name || 'Playlist';
+      const titleEl = document.getElementById('playlist-title');
+      if (titleEl) titleEl.textContent = data.name || 'Playlist';
       const ul = document.getElementById('playlist-tracks');
-      ul.innerHTML = '';
-      (data.tracks || []).forEach((t, i) => {
-        const li = document.createElement('li');
-        li.textContent = t.name || t.path;
-        const actions = document.createElement('div');
-        const playBtn = document.createElement('button');
-        playBtn.className = 'btn';
-        playBtn.textContent = 'Play';
-        playBtn.addEventListener('click', () => state.app.playTrack(t));
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'btn';
-        removeBtn.textContent = 'Remove';
-        removeBtn.disabled = data.type === 'smart';
-        removeBtn.addEventListener('click', () => removeTrack(i));
-        actions.appendChild(playBtn);
-        actions.appendChild(removeBtn);
-        li.appendChild(actions);
-        ul.appendChild(li);
-      });
-
+      if (ul) {
+        ul.innerHTML = '';
+        (data.tracks || []).forEach((t, i) => {
+          const li = document.createElement('li');
+          li.textContent = t.name || t.path;
+          const actions = document.createElement('div');
+          const playBtn = document.createElement('button');
+          playBtn.className = 'btn';
+          playBtn.textContent = 'Play';
+          playBtn.addEventListener('click', () => state.app.playTrack(t));
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'btn';
+          removeBtn.textContent = 'Remove';
+          removeBtn.disabled = data.type === 'smart';
+          removeBtn.addEventListener('click', () => removeTrack(i));
+          actions.appendChild(playBtn);
+          actions.appendChild(removeBtn);
+          li.appendChild(actions);
+          ul.appendChild(li);
+        });
+      }
       // highlight selected in list
       [...document.querySelectorAll('#playlists li')].forEach(li => {
-        li.classList.toggle('active', li.dataset.id === id);
+        li.classList.toggle('active', li.dataset.id === String(id));
       });
     }
 
@@ -83,6 +103,18 @@
       const n = String(name || '').trim();
       if (!n) return { ok: false, error: 'Empty name' };
       const res = await API.post('api/playlists.php', { action: 'create', name: n });
+      if (res.ok) {
+        await loadPlaylists();
+        await selectPlaylist(res.playlist.id);
+      }
+      return res;
+    }
+
+    // Drawer-driven smart creation
+    async function createSmartByNameAndRules(name, rules) {
+      const n = String(name || '').trim();
+      if (!n) return { ok: false, error: 'Empty name' };
+      const res = await API.post('api/playlists.php', { action: 'create_smart', name: n, rules });
       if (res.ok) {
         await loadPlaylists();
         await selectPlaylist(res.playlist.id);
@@ -141,11 +173,15 @@
       if (res.ok) {
         state.selectedId = null;
         loadPlaylists();
-        document.getElementById('playlist-title').textContent = 'Playlist';
-        document.getElementById('playlist-tracks').innerHTML = '';
+        const titleEl = document.getElementById('playlist-title');
+        if (titleEl) titleEl.textContent = 'Playlist';
+        const ul = document.getElementById('playlist-tracks');
+        if (ul) ul.innerHTML = '';
       }
     }
 
-    return { init, selectPlaylist, createPlaylistByName };
+    function getSelectedId() { return state.selectedId; }
+
+    return { init, selectPlaylist, createPlaylistByName, loadPlaylists, addCurrent, deleteSelected, getSelectedId, createSmartByNameAndRules };
   })();
 })();

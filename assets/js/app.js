@@ -45,8 +45,9 @@ const App = (() => {
     // Ensure debug panel is visible
     try { if (window.BUG) { BUG.show(); BUG.log('App.init'); } } catch (_) {}
 
-    // Defer AudioContext creation until user gesture to avoid autoplay policy warnings
+    // Create AudioContext immediately so visualizer shows; audio starts only on user interaction
     bindUI();
+    ensureAudioContext();
     await loadLibrary();
     try { if (typeof PlaylistUI !== 'undefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (_) {}
 

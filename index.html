@@ -17,7 +17,12 @@
       <div class="appbar-actions"></div>
     </div>
   </header>
-  
+  <div id="top-menu-panel" class="md-menu" aria-label="Menu">
+    <div class="menu-section">
+      <strong>Playlists</strong>
+      <ul id="menu-playlists" class="list"></ul>
+    </div>
+  </div>
   <main>
     <div id="app" class="md-container md-grid app-grid">
       <!-- Library Sidebar -->
@@ -201,6 +206,82 @@
           </div>
           <div id="viz-scrim" class="md-scrim" aria-hidden="true"></div>
 
+          <!-- Floating Layers Drawer -->
+          <div id="layers-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="layers-drawer-title">
+            <div class="drawer-head">
+              <h3 id="layers-drawer-title">Layers</h3>
+              <button id="layers-drawer-close" class="icon-btn" aria-label="Close">✕</button>
+            </div>
+            <div class="drawer-content">
+              <div class="customize">
+                <div class="viz-style">
+                  <label>Layer Style</label>
+                  <select id="layer-style">
+                    <option value="bars">Bars</option>
+                    <option value="wave">Wave</option>
+                    <option value="mirror">Mirror Bars</option>
+                    <option value="ring">Ring Wave</option>
+                    <option value="radial">Radial Bars</option>
+                    <option value="particles">Particles</option>
+                    <option value="circle">Circle</option>
+                  </select>
+                </div>
+                <div class="viz-colors">
+                  <label>Colors</label>
+                  <input type="color" id="layer-color-1" value="#19d3ae"/>
+                  <input type="color" id="layer-color-2" value="#1e90ff"/>
+                </div>
+                <div class="viz-tuning">
+                  <label>Segments <input type="range" id="layer-segments" min="1" max="8" step="1" value="2"></label>
+                </div>
+                <div class="presets">
+                  <button id="layer-add2" class="btn primary">Add Layer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="layers-scrim" class="md-scrim" aria-hidden="true"></div>
+
+          <!-- Smart Playlist Drawer -->
+          <div id="smart-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="smart-drawer-title">
+            <div class="drawer-head">
+              <h3 id="smart-drawer-title">Create Smart Playlist</h3>
+              <button id="smart-drawer-close" class="icon-btn" aria-label="Close">✕</button>
+            </div>
+            <div class="drawer-content">
+              <div class="customize">
+                <div class="viz-style">
+                  <label>Name</label>
+                  <input type="text" id="smart-name2" placeholder="Smart playlist name"/>
+                </div>
+                <div class="viz-style">
+                  <label>Name contains</label>
+                  <input type="text" id="smart-contains2" placeholder="Substring"/>
+                </div>
+                <div class="viz-style">
+                  <label>Extensions</label>
+                  <input type="text" id="smart-exts2" placeholder="e.g. mp3,ogg"/>
+                </div>
+                <div class="viz-style">
+                  <label>Folder prefix</label>
+                  <input type="text" id="smart-folder2" placeholder="assets/music/subfolder"/>
+                </div>
+                <div class="viz-style">
+                  <label>Min MB</label>
+                  <input type="number" id="smart-minmb2" min="0" placeholder="0"/>
+                </div>
+                <div class="viz-style">
+                  <label>Max MB</label>
+                  <input type="number" id="smart-maxmb2" min="0" placeholder="0"/>
+                </div>
+                <div class="presets">
+                  <button id="smart-create-btn" class="btn primary">Create Smart</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="smart-scrim" class="md-scrim" aria-hidden="true"></div>
+
           <div class="eq-header">
             <span>Equalizer</span>
             <select id="eq-preset">
@@ -284,10 +365,6 @@
         <div id="playlist-details" class="playlist-details">
           <h3 id="playlist-title">Playlist</h3>
           <ul id="playlist-tracks" class="list tracks"></ul>
-          <div class="toolbar" style="margin-top:0.6rem;">
-            <button id="add-current" class="btn" title="Add currently playing track to selected playlist">Add Current Track</button>
-            <button id="delete-playlist" class="btn" title="Delete selected playlist">Delete Playlist</button>
-          </div>
         </div>
       </aside>
     </div>
@@ -299,6 +376,9 @@
     <div class="dial-items">
       <button id="sd-add-playlist" class="icon-btn" title="Add Playlist">📝</button>
       <button id="sd-add-smart" class="icon-btn" title="Add Smart Playlist">⚙️</button>
+      <button id="sd-add-current" class="icon-btn" title="Add Current Track">➕🎵</button>
+      <button id="sd-del-playlist" class="icon-btn danger" title="Delete Selected Playlist">🗑</button>
+      <button id="sd-open-layers" class="icon-btn" title="Layers">☷</button>
     </div>
   </div>
 
@@ -340,8 +420,13 @@
       }
 
       if (fab) fab.addEventListener('click', openDrawer);
-      if (menuBtn) menuBtn.addEventListener('click', () => {
-        if (menuPanel) menuPanel.classList.toggle('open');
+      if (menuBtn) menuBtn.addEventListener('click', async () => {
+        if (!menuPanel) return;
+        const willOpen = !menuPanel.classList.contains('open');
+        menuPanel.classList.toggle('open');
+        if (willOpen) {
+          try { if (window.PlaylistUI && PlaylistUI.loadPlaylists) await PlaylistUI.loadPlaylists(); } catch (_) {}
+        }
       });
       if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
       if (scrim) scrim.addEventListener('click', closeDrawer);
@@ -390,33 +475,148 @@
           if (sd) sd.classList.remove('open');
         }
       });
-      if (sdAddSmart) sdAddSmart.addEventListener('click', async () => {
-        const name = window.prompt('New smart playlist name');
-        if (!name) return;
+      if (sdAddSmart) sdAddSmart.addEventListener('click', () => {
+        const sd = qs('speed-dial');
+        if (sd) sd.classList.remove('open');
+        const d = qs('smart-drawer'), s = qs('smart-scrim');
+        if (d) d.classList.add('open');
+        if (s) s.classList.add('show');
+      });
+
+      // Layers drawer open/close
+      const fabLayers = qs('fab-layers');
+      const layersDrawer = qs('layers-drawer');
+      const layersScrim = qs('layers-scrim');
+      const layersClose = qs('layers-drawer-close');
+      function openLayers() {
+        if (layersDrawer) layersDrawer.classList.add('open');
+        if (layersScrim) layersScrim.classList.add('show');
+      }
+      function closeLayers() {
+        if (layersDrawer) layersDrawer.classList.remove('open');
+        if (layersScrim) layersScrim.classList.remove('show');
+      }
+      if (fabLayers) fabLayers.addEventListener('click', openLayers);
+      if (layersClose) layersClose.addEventListener('click', closeLayers);
+      if (layersScrim) layersScrim.addEventListener('click', closeLayers);
+
+      // Smart drawer close + create
+      const smartDrawer = qs('smart-drawer');
+      const smartScrim = qs('smart-scrim');
+      const smartClose = qs('smart-drawer-close');
+      if (smartClose) smartClose.addEventListener('click', () => { smartDrawer.classList.remove('open'); smartScrim.classList.remove('show'); });
+      if (smartScrim) smartScrim.addEventListener('click', () => { smartDrawer.classList.remove('open'); smartScrim.classList.remove('show'); });
+      const smartCreate = qs('smart-create-btn');
+      if (smartCreate) smartCreate.addEventListener('click', async () => {
+        const name = (qs('smart-name2').value || '').trim();
+        const contains = (qs('smart-contains2').value || '').trim();
+        const exts = (qs('smart-exts2').value || '').trim().toLowerCase();
+        const folder = (qs('smart-folder2').value || '').trim();
+        const minMb = Number(qs('smart-minmb2').value || '0');
+        const maxMb = Number(qs('smart-maxmb2').value || '0');
+        if (!name) { try { Toast && Toast.show('Enter smart playlist name', 'error'); } catch (_) {} return; }
+        const rules = {
+          contains,
+          exts: exts ? exts.split(',').map(s => s.trim()).filter(Boolean) : [],
+          folder,
+          minBytes: minMb > 0 ? Math.round(minMb * 1024 * 1024) : 0,
+          maxBytes: maxMb > 0 ? Math.round(maxMb * 1024 * 1024) : 0
+        };
         try {
-          const res = await API.post('api/playlists.php', { action: 'create_smart', name, rules: {} });
-          if (res.ok) {
-            try { Toast && Toast.show('Smart playlist created', 'success', 2000); } catch (_) {}
-            if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
+          if (window.PlaylistUI && PlaylistUI.createSmartByNameAndRules) {
+            const res = await PlaylistUI.createSmartByNameAndRules(name, rules);
+            if (res.ok) {
+              try { Toast && Toast.show('Smart playlist created', 'success'); } catch (_) {}
+              smartDrawer.classList.remove('open'); smartScrim.classList.remove('show');
+            } else {
+              try { Toast && Toast.show(res.error || 'Failed to create', 'error'); } catch (_) {}
+            }
           } else {
-            try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
+            const res = await API.post('api/playlists.php', { action: 'create_smart', name, rules });
+            if (res.ok) {
+              try { Toast && Toast.show('Smart playlist created', 'success'); } catch (_) {}
+              if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
+              smartDrawer.classList.remove('open'); smartScrim.classList.remove('show');
+            } else {
+              try { Toast && Toast.show(res.error || 'Failed to create', 'error'); } catch (_) {}
+            }
           }
         } catch (err) {
-          console.error('Create smart playlist error', err);
-          try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
-        } finally {
-          if (sd) sd.classList.remove('open');
+          console.error('Create smart error', err);
+          try { Toast && Toast.show('Create failed: ' + err.message, 'error'); } catch (_) {}
         }
       });
 
-      // Floating Layers button: scroll to and highlight layers panel
-      const fabLayers = qs('fab-layers');
-      if (fabLayers) fabLayers.addEventListener('click', () => {
-        const panel = document.querySelector('.layers-panel');
-        if (panel) {
-          panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          panel.classList.add('pulse');
-          setTimeout(() => panel.classList.remove('pulse'), 1500);
+      // Speed Dial extra actions: add current / delete selected / open layers
+      const sdAddCurrent = qs('sd-add-current');
+      if (sdAddCurrent) sdAddCurrent.addEventListener('click', async () => {
+        try {
+          if (window.PlaylistUI && PlaylistUI.addCurrent) {
+            await PlaylistUI.addCurrent();
+            try { Toast && Toast.show('Added current track', 'success'); } catch (_) {}
+          } else {
+            try { Toast && Toast.show('Select a playlist first', 'error'); } catch (_) {}
+          }
+        } catch (err) {
+          console.error('Add current failed', err);
+          try { Toast && Toast.show('Add failed: ' + err.message, 'error'); } catch (_) {}
+        }
+        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
+      });
+      const sdDelPl = qs('sd-del-playlist');
+      if (sdDelPl) sdDelPl.addEventListener('click', async () => {
+        const ok = window.confirm('Delete selected playlist?');
+        if (!ok) return;
+        try {
+          if (window.PlaylistUI && PlaylistUI.deleteSelected) {
+            await PlaylistUI.deleteSelected();
+            try { Toast && Toast.show('Playlist deleted', 'success'); } catch (_) {}
+          }
+        } catch (err) {
+          console.error('Delete playlist failed', err);
+          try { Toast && Toast.show('Delete failed: ' + err.message, 'error'); } catch (_) {}
+        }
+        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
+      });
+      const sdLayers = qs('sd-open-layers');
+      if (sdLayers) sdLayers.addEventListener('click', () => {
+        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
+        openLayers();
+      });
+
+      // Add Layer via layers drawer with style choice and perf guard
+      const layerAdd2 = qs('layer-add2');
+      if (layerAdd2) layerAdd2.addEventListener('click', () => {
+        try {
+          const style = (qs('layer-style')?.value) || 'circle';
+          const c1 = (qs('layer-color-1')?.value) || '#19d3ae';
+          const c2 = (qs('layer-color-2')?.value) || '#1e90ff';
+          const seg = Number((qs('layer-segments')?.value) || 2);
+          const idx = App.state.viz.addLayer(style, {
+            color1: c1, color2: c2,
+            rotation: Number(document.getElementById('viz-rot').value || 0.6),
+            thickness: Number(document.getElementById('viz-thickness').value || 1),
+            ringFloor: Number(document.getElementById('viz-ring-floor').value || 0.16),
+            radialFloor: Number(document.getElementById('viz-radial-floor').value || 0.16),
+            spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),
+            waveScale: Number(document.getElementById('viz-wave-scale').value || 1),
+            segments: Math.max(1, Math.min(8, seg))
+          });
+          App.state.viz.selectLayer(idx);
+          App.renderLayersUI();
+          // Performance guard: if more than 1 layer, enforce performance mode and soften trail
+          const count = App.state.viz.getLayers().length;
+          if (count > 1 && App.state.viz.setPerformanceMode) {
+            App.state.viz.setPerformanceMode(true);
+            const perfToggle = document.getElementById('viz-perf'); if (perfToggle) perfToggle.checked = true;
+            if (App.state.viz.setTrailAlpha) App.state.viz.setTrailAlpha(0.05);
+            if (App.state.viz.setGlowStrength) App.state.viz.setGlowStrength(Math.min(12, Number(document.getElementById('viz-glow-strength').value || 12)));
+          }
+          try { Toast && Toast.show('Layer added', 'success', 1500); } catch (_) {}
+          closeLayers();
+        } catch (err) {
+          console.error('Add layer failed', err);
+          try { Toast && Toast.show('Add layer failed: ' + err.message, 'error'); } catch (_) {}
         }
       });
     })();
