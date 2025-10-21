@@ -312,8 +312,9 @@
     // --- Layer stack API ----------------------------------------------------
 
     addLayer(type = 'circle', params = {}) {
+      const style = String(type || 'circle');
       const L = {
-        style: String(type || 'circle'),
+        style,
         visible: true,
         color1: params.color1 ?? this.color1,
         color2: params.color2 ?? this.color2,
@@ -325,9 +326,17 @@
         segments: params.segments ?? this.segments,
         rotation: params.rotation ?? this.rotation,
         // per-layer blending
-        blend: params.blend ?? 'lighter',  // 'lighter' blends colors additively
-        alpha: params.alpha ?? 1.0         // opacity for this layer
+        blend: params.blend ?? (style === 'background' ? 'source-over' : 'lighter'),
+        alpha: params.alpha ?? (style === 'background' ? 1.0 : 1.0),
+        // image/background extras
+        imgSrc: params.imgSrc ?? null,
+        imgFit: params.imgFit ?? 'cover',
+        img: null
       };
+      // Preload image layer if imgSrc provided
+      if (style === 'image' && L.imgSrc) {
+        this.loadImageForLayer(L, L.imgSrc);
+      }
       this.layers.push(L);
       if (this.sel < 0) this.sel = 0;
       return this.layers.length - 1;
@@ -705,8 +714,24 @@
       ctx.shadowColor = this.glow ? (this.color2 || '#fff') : 'transparent';
       ctx.shadowBlur = this.glow ? (this.fast ? Math.min(this.glowStrength, 6) : this.glowStrength) : 0;
 
+      // Draw background layers first (base fill)
       for (const L of layersList) {
         if (L.visible === false) continue;
+        if ((L.style || this.style) === 'background') {
+          // backgrounds render without glow/trail
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          this.ctx.globalCompositeOperation = L.blend || 'source-over';
+          this.ctx.globalAlpha = (typeof L.alpha === 'number') ? Math.max(0, Math.min(1, L.alpha)) : 1.0;
+          this.drawBackground(w, h, L);
+        }
+      }
+
+      for (const L of layersList) {
+        if (L.visible === false) continue;
+        const style = L.style || this.style;
+        if (style === 'background') continue; // already drawn
+
         const c1 = L.color1 || this.color1;
         const c2 = L.color2 || this.color2;
 
@@ -730,8 +755,9 @@
         this.ctx.globalCompositeOperation = blendMode;
         this.ctx.globalAlpha = alpha;
 
-        const style = L.style || this.style;
-        if (style === 'bars') this.drawBars(w, h, L);
+        if (style === 'image') {
+          this.drawImage(w, h, L);
+        } else if (style === 'bars') this.drawBars(w, h, L);
         else if (style === 'wave') this.drawWave(w, h, L);
         else if (style === 'radial') this.drawRadialBars(w, h, L);
         else if (style === 'ring') this.drawRingWave(w, h, L);
@@ -1036,6 +1062,73 @@
       this.ctx.clip();
       this.ctx.drawImage(this.artImage, cx - r, cy - r, r * 2, r * 2);
       this.ctx.restore();
+    }
+
+    // --- Background/Image layers --------------------------------------------
+
+    drawBackground(w, h, L) {
+      const c1 = L?.color1 || this.color1;
+      const c2 = L?.color2 || this.color2;
+      const grad = API.gradient(this.ctx, c1, c2, w, h);
+      this.ctx.fillStyle = grad;
+      this.ctx.fillRect(0, 0, w, h);
+    }
+
+    loadImageForLayer(L, src) {
+      if (!L) return;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => { L.img = img; };
+      img.onerror = () => { L.img = null; };
+      img.src = src;
+    }
+
+    setLayerImage(src) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      const L = this.layers[this.sel];
+      L.imgSrc = src || null;
+      if (L.imgSrc) this.loadImageForLayer(L, L.imgSrc);
+      else L.img = null;
+    }
+
+    setLayerImgFit(fit) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      const L = this.layers[this.sel];
+      const f = String(fit || '').toLowerCase();
+      L.imgFit = ['cover','contain','stretch','tile'].includes(f) ? f : 'cover';
+    }
+
+    drawImage(w, h, L) {
+      const img = L?.img;
+      if (!img) return;
+      const fit = (L?.imgFit || 'cover');
+      const iw = img.width, ih = img.height;
+      let dx = 0, dy = 0, dw = w, dh = h;
+
+      if (fit === 'stretch') {
+        dx = 0; dy = 0; dw = w; dh = h;
+      } else if (fit === 'contain') {
+        const scale = Math.min(w / iw, h / ih);
+        dw = Math.round(iw * scale);
+        dh = Math.round(ih * scale);
+        dx = Math.round((w - dw) / 2);
+        dy = Math.round((h - dh) / 2);
+      } else if (fit === 'tile') {
+        const pattern = this.ctx.createPattern(img, 'repeat');
+        if (pattern) {
+          this.ctx.fillStyle = pattern;
+          this.ctx.fillRect(0, 0, w, h);
+          return;
+        }
+      } else { // cover
+        const scale = Math.max(w / iw, h / ih);
+        dw = Math.round(iw * scale);
+        dh = Math.round(ih * scale);
+        dx = Math.round((w - dw) / 2);
+        dy = Math.round((h - dh) / 2);
+      }
+
+      this.ctx.drawImage(img, dx, dy, dw, dh);
     }
   }
 

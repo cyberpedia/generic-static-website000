@@ -109,6 +109,8 @@
             <button class="icon-btn" data-type="mirror">＋ Add Mirror Bars</button>
             <button class="icon-btn" data-type="wave">＋ Add Wave</button>
             <button class="icon-btn" data-type="particles">＋ Add Particles</button>
+            <button class="icon-btn" data-type="image">＋ Add Image</button>
+            <button class="icon-btn" data-type="background">＋ Add Background</button>
           </div>
           <div id="viz-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="viz-drawer-title">
             <div class="drawer-head">
@@ -242,6 +244,8 @@
                       <option value="radial">Radial Bars</option>
                       <option value="particles">Particles</option>
                       <option value="circle">Circle</option>
+                      <option value="image">Image</option>
+                      <option value="background">Background</option>
                     </select>
                   </div>
                   <div class="viz-colors">
@@ -278,6 +282,8 @@
                       <option value="radial">Radial Bars</option>
                       <option value="particles">Particles</option>
                       <option value="circle">Circle</option>
+                      <option value="image">Image</option>
+                      <option value="background">Background</option>
                     </select>
                   </div>
                   <div class="viz-colors">
@@ -303,6 +309,26 @@
                       </select>
                     </label>
                     <label>Opacity <input type="range" id="layer-edit-alpha" min="0" max="1" step="0.05" value="1"></label>
+                  </div>
+
+                  <!-- Image layer settings -->
+                  <div class="viz-style">
+                    <label>Image URL</label>
+                    <input type="url" id="layer-edit-image-url" placeholder="https://..."/>
+                    <button id="layer-edit-image-load" class="btn secondary">Load</button>
+                  </div>
+                  <div class="viz-style">
+                    <label>Image File</label>
+                    <input type="file" id="layer-edit-image-file" accept="image/*"/>
+                  </div>
+                  <div class="viz-style">
+                    <label>Image Fit</label>
+                    <select id="layer-edit-img-fit">
+                      <option value="cover" selected>Cover</option>
+                      <option value="contain">Contain</option>
+                      <option value="stretch">Stretch</option>
+                      <option value="tile">Tile</option>
+                    </select>
                   </div>
                 </div>
 

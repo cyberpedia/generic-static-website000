@@ -1123,6 +1123,12 @@ ${item.name}`);
     const lSpike = document.getElementById('layer-spike-scale');
     const lWave = document.getElementById('layer-wave-scale');
 
+    // Image layer controls
+    const leImgUrl = document.getElementById('layer-edit-image-url');
+    const leImgLoad = document.getElementById('layer-edit-image-load');
+    const leImgFile = document.getElementById('layer-edit-image-file');
+    const leImgFit = document.getElementById('layer-edit-img-fit');
+
     function withSel(fn) {
       if (!state.viz || state.viz.sel < 0) return;
       try { fn(state.viz.layers[state.viz.sel], state.viz.sel); } catch (_) {}
@@ -1151,6 +1157,58 @@ ${item.name}`);
       });
     });
     if (leSeg) leSeg.addEventListener('input', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setSegments) state.viz.setSegments(Number(e.target.value));
+        logAction('layer.edit.segments', { value: Number(e.target.value) }, 'layer-edit-segments');
+      });
+    });
+    if (leBlend) leBlend.addEventListener('change', (e) => {
+      withSel((L) => { L.blend = e.target.value; renderLayersUI(); syncLayerEditForm(); logAction('layer.edit.blend', { value: e.target.value }); });
+    });
+    if (leAlpha) leAlpha.addEventListener('input', (e) => {
+      withSel((L) => { L.alpha = Number(e.target.value); renderLayersUI(); logAction('layer.edit.alpha', { value: Number(e.target.value) }, 'layer-edit-alpha'); });
+    });
+
+    if (lRot) lRot.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRotationSpeed) state.viz.setRotationSpeed(Number(e.target.value)); }); logAction('layer.edit.rot', { value: Number(e.target.value) }, 'layer-rot'); });
+    if (lDec) lDec.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setDecay) state.viz.setDecay(Number(e.target.value)); }); logAction('layer.edit.decay', { value: Number(e.target.value) }, 'layer-decay'); });
+    if (lTh) lTh.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setThickness) state.viz.setThickness(Number(e.target.value)); }); logAction('layer.edit.thickness', { value: Number(e.target.value) }, 'layer-thickness'); });
+    if (lRing) lRing.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRingFloor) state.viz.setRingFloor(Number(e.target.value)); }); logAction('layer.edit.ringFloor', { value: Number(e.target.value) }, 'layer-ringFloor'); });
+    if (lRad) lRad.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRadialFloor) state.viz.setRadialFloor(Number(e.target.value)); }); logAction('layer.edit.radialFloor', { value: Number(e.target.value) }, 'layer-radialFloor'); });
+    if (lSpike) lSpike.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setSpikeScale) state.viz.setSpikeScale(Number(e.target.value)); }); logAction('layer.edit.spikeScale', { value: Number(e.target.value) }, 'layer-spikeScale'); });
+    if (lWave) lWave.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setWaveScale) state.viz.setWaveScale(Number(e.target.value)); }); logAction('layer.edit.waveScale', { value: Number(e.target.value) }, 'layer-waveScale'); });
+
+    // Image layer handlers
+    if (leImgLoad) leImgLoad.addEventListener('click', () => {
+      const url = (leImgUrl?.value || '').trim();
+      if (!url) return;
+      withSel(() => {
+        if (state.viz && state.viz.setLayerImage) state.viz.setLayerImage(url);
+        renderLayersUI();
+        notify('Image loaded', 'success', 1500);
+        logAction('layer.edit.imageUrl', { url });
+      });
+    });
+    if (leImgFile) leImgFile.addEventListener('change', () => {
+      const f = leImgFile.files && leImgFile.files[0];
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      withSel(() => {
+        if (state.viz && state.viz.setLayerImage) state.viz.setLayerImage(url);
+        renderLayersUI();
+        notify('Image selected', 'success', 1200);
+        logAction('layer.edit.imageFile', { name: f.name, size: f.size });
+      });
+      // Note: we keep the object URL for session; revocation handled on page unload
+      leImgFile.value = '';
+    });
+    if (leImgFit) leImgFit.addEventListener('change', (e) => {
+      const fit = e.target.value;
+      withSel(() => {
+        if (state.viz && state.viz.setLayerImgFit) state.viz.setLayerImgFit(fit);
+        renderLayersUI();
+        logAction('layer.edit.imgFit', { fit });
+      });
+    });g) leSeg.addEventListener('input', (e) => {
       withSel(() => {
         if (state.viz && state.viz.setSegments) state.viz.setSegments(Number(e.target.value));
         logAction('layer.edit.segments', { value: Number(e.target.value) }, 'layer-edit-segments');
@@ -1609,6 +1667,13 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       if (!state.viz || state.viz.sel < 0) return;
       const L = state.viz.layers[state.viz.sel];
       const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = String(val); };
+      const setShow = (id, on) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const wrap = el.closest('.viz-style') || el.parentElement;
+        if (wrap) wrap.style.display = on ? '' : 'none';
+      };
+
       setVal('layer-edit-style', L.style || 'circle');
       setVal('layer-edit-color-1', L.color1 || '#19d3ae');
       setVal('layer-edit-color-2', L.color2 || '#1e90ff');
@@ -1622,6 +1687,15 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       setVal('layer-edit-segments', (typeof L.segments !== 'undefined' ? L.segments : document.getElementById('viz-segments')?.value) || 2);
       setVal('layer-edit-blend', (typeof L.blend !== 'undefined' ? L.blend : 'lighter'));
       setVal('layer-edit-alpha', (typeof L.alpha !== 'undefined' ? L.alpha : 1));
+
+      // Image fields visibility and values
+      const isImage = (String(L.style).toLowerCase() === 'image');
+      setVal('layer-edit-image-url', L.imgSrc || '');
+      setVal('layer-edit-img-fit', L.imgFit || 'cover');
+      setShow('layer-edit-image-url', isImage);
+      setShow('layer-edit-image-load', isImage);
+      setShow('layer-edit-image-file', isImage);
+      setShow('layer-edit-img-fit', isImage);
     } catch (_) {}
   }
 
