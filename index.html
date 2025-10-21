@@ -17,6 +17,10 @@
       <div class="appbar-actions"></div>
     </div>
   </header>
+  <div id="top-menu-panel" class="md-menu" aria-label="Menu">
+    <button id="menu-create-playlist" class="btn secondary">Create Playlist</button>
+    <button id="menu-create-smart" class="btn secondary">Create Smart</button>
+  </div>
   <main>
     <div id="app" class="md-container md-grid app-grid">
       <!-- Library Sidebar -->
@@ -94,8 +98,8 @@
           </div>
 
           <!-- Floating Customize button + drawer -->
-          <button id="fab-customize" class="md-fab" aria-label="Customize visualizer" title="Customize">✎</button>
-
+         <<button id="fab-customize" class="md-fab" aria-label="Customize visualizer" title="Customize"</</button>
+         < button id="fab-layers" class="md-fab" aria-label="Layers" title="Layers">☷
           <div id="viz-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="viz-drawer-title">
             <div class="drawer-head">
               <h3 id="viz-drawer-title">Customize Visualizer</h3>
@@ -334,6 +338,7 @@
       const scrim = qs('viz-scrim');
       const closeBtn = qs('viz-drawer-close');
       const menuBtn = qs('top-menu');
+      const menuPanel = qs('top-menu-panel');
 
       function openDrawer() {
         if (!drawer) return;
@@ -347,11 +352,62 @@
       }
 
       if (fab) fab.addEventListener('click', openDrawer);
-      if (menuBtn) menuBtn.addEventListener('click', openDrawer);
+      if (menuBtn) menuBtn.addEventListener('click', () => {
+        if (menuPanel) menuPanel.classList.toggle('open');
+      });
       if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
       if (scrim) scrim.addEventListener('click', closeDrawer);
       window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeDrawer();
+        if (e.key === 'Escape') {
+          closeDrawer();
+          if (menuPanel) menuPanel.classList.remove('open');
+        }
+      });
+
+      // Menu actions: create playlist / smart
+      const mcpl = qs('menu-create-playlist');
+      const mcs = qs('menu-create-smart');
+      if (mcpl) mcpl.addEventListener('click', async () => {
+        const name = window.prompt('New playlist name');
+        if (!name) return;
+        try {
+          if (window.PlaylistUI && PlaylistUI.createPlaylistByName) {
+            const res = await PlaylistUI.createPlaylistByName(name);
+            if (res.ok) { try { Toast && Toast.show('Playlist created', 'success', 2000); } catch (_) {} }
+            else { try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {} }
+          } else {
+            const res = await API.post('api/playlists.php', { action: 'create', name });
+            if (res.ok) {
+              try { Toast && Toast.show('Playlist created', 'success', 2000); } catch (_) {}
+              if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
+            } else {
+              try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
+            }
+          }
+        } catch (err) {
+          console.error('Create playlist error', err);
+          try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
+        } finally {
+          if (menuPanel) menuPanel.classList.remove('open');
+        }
+      });
+      if (mcs) mcs.addEventListener('click', async () => {
+        const name = window.prompt('Smart playlist name');
+        if (!name) return;
+        try {
+          const res = await API.post('api/playlists.php', { action: 'create_smart', name, rules: {} });
+          if (res.ok) {
+            try { Toast && Toast.show('Smart playlist created', 'success', 2000); } catch (_) {}
+            if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
+          } else {
+            try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
+          }
+        } catch (err) {
+          console.error('Create smart playlist error', err);
+          try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
+        } finally {
+          if (menuPanel) menuPanel.classList.remove('open');
+        }
       });
 
       // Speed Dial: quick add playlist
@@ -387,6 +443,17 @@
           try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
         } finally {
           if (sd) sd.classList.remove('open');
+        }
+      });
+
+      // Floating Layers button: scroll to and highlight layers panel
+      const fabLayers = qs('fab-layers');
+      if (fabLayers) fabLayers.addEventListener('click', () => {
+        const panel = document.querySelector('.layers-panel');
+        if (panel) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          panel.classList.add('pulse');
+          setTimeout(() => panel.classList.remove('pulse'), 1500);
         }
       });
     })();

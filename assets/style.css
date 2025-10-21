@@ -154,6 +154,19 @@ body.light .viz-mode select {
   align-items: center;
   flex-wrap: wrap;
 }
+
+/* Top menu panel */
+.md-menu {
+  position: sticky;
+  top: 48px; /* below appbar */
+  z-index: 999;
+  display: none;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--md-surface);
+  border-bottom: 1px solid var(--md-panel-border);
+}
+.md-menu.open { display: flex; flex-wrap: wrap; }
 .md-appbar .appbar-input {
   padding: 0.4rem 0.6rem;
   border: 1px solid #3a4155;
@@ -253,6 +266,7 @@ footer {
   font-size: 1.4rem;
 }
 .md-fab:hover { background: #2a73d8; }
+#fab-layers { bottom: 152px; }
 
 /* Drawer for visualizer customization */
 .md-drawer {
@@ -553,6 +567,15 @@ footer {
   padding: 10px;
   color: #e6e6e9;
   margin-bottom: 8px;
+  transition: border-color 200ms ease;
+}
+.layers-panel.pulse {
+  animation: pulseBorder 1.2s ease;
+}
+@keyframes pulseBorder {
+  0% { border-color: #2c3345; }
+  50% { border-color: #2e7be7; }
+  100% { border-color: #2c3345; }
 }
 .layers li .handle { color: #4c5570; }
 .layers li .name { font-weight: 700; }
