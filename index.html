@@ -6,28 +6,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Avee-like Media Player (PHP/XAMPP)</title>
   <link rel="stylesheet" href="assets/style.css?v=20251020-18">
+  <style>
+    /* Floating Action Button (FAB) */
+    .md-fab {
+      position: fixed;
+      right: 16px;
+      bottom: 88px; /* above bottom nav */
+      z-index: 1100;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #2e7be7;
+      color: #fff;
+      border: none;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+    .md-fab:hover { background: #2a73d8; }
+
+    /* Drawer for visualizer customization */
+    .md-drawer {
+      position: fixed;
+      top: 0; right: 0;
+      height: 100%;
+      width: clamp(280px, 86vw, 420px);
+      background: #12151d;
+      color: #e6e6e9;
+      border-left: 1px solid #1c2236;
+      box-shadow: -24px 0 60px rgba(0,0,0,0.45);
+      transform: translateX(100%);
+      transition: transform 220ms ease;
+      z-index: 1100;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      overflow-y: auto;
+    }
+    .md-drawer.open { transform: translateX(0); }
+    .md-drawer .drawer-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-bottom: 8px; border-bottom: 1px solid #1c2236; margin-bottom: 10px;
+    }
+    .md-drawer .drawer-head h3 { margin: 0; font-size: 1.1rem; color: #f2f5ff; }
+    .md-scrim {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 1099;
+      display: none;
+    }
+    .md-scrim.show { display: block; }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
 <body>
   <header class="md-appbar" role="banner">
-    <div class="appbar-row">
-      <button id="top-menu" class="icon-btn" aria-label="Menu" title="Menu">☰</button>
-      <div class="appbar-title">Avee-like Media Player</div>
-      <div class="appbar-actions">
-        <input type="text" id="top-search" class="appbar-input" placeholder="Search…" aria-label="Search" />
-        <label class="upload-btn appbar-upload" title="Upload audio files">
-          Upload
-          <input type="file" id="top-upload-input" accept="audio/*" multiple />
-        </label>
-        <button id="top-rescan" class="btn secondary" title="Rescan music folder" aria-label="Rescan">Rescan</button>
-        <div class="import-inline" aria-label="Import from URL">
-          <input type="url" id="top-import-url" class="appbar-input" placeholder="Import URL" aria-label="Import URL"/>
-          <button id="top-import-btn" class="btn secondary" title="Import from URL" aria-label="Import">Import</button>
-        </div>
-      </div>
-    </div>
-  </header>
-
+   < div class="appbar-row">
+     < button id="top-menu" class="icon-btn" aria-label="Menu" title="Menu"</>☰button>
+     < div class="appbar-title">Avee-like Media Play</erdiv>
+     < div class="appbar-actions">
+       < input type="text" id="top-search" class="
   <main>
     <div id="app" class="md-container md-grid app-grid">
       <!-- Library Sidebar -->
@@ -95,100 +137,112 @@
             
           </div>
 
-          <div class="customize">
-            <div class="viz-style">
-              <label>Visualizer</label>
-              <select id="viz-style">
-                <option value="bars">Bars</option>
-                <option value="wave">Wave</option>
-                <option value="mirror">Mirror Bars</option>
-                <option value="ring">Ring Wave</option>
-                <option value="radial">Radial Bars</option>
-                <option value="particles">Particles</option>
-                <option value="circle">Circle</option>
-              </select>
-            </div>
-            <div class="viz-template">
-              <label>Style Template</label>
-              <select id="style-template"></select>
-            </div>
-            <div class="viz-colors">
-              <label>Colors</label>
-              <input type="color" id="viz-color-1" value="#19d3ae"/>
-              <input type="color" id="viz-color-2" value="#1e90ff"/>
-            </div>
-            <div class="viz-options">
-              <label><input type="checkbox" id="viz-glow" checked/> Glow</label>
-              <label><input type="checkbox" id="viz-trail" checked/> Trail</label>
-              <label><input type="checkbox" id="viz-art" checked/> Center Art</label>
-              <label><input type="checkbox" id="viz-style-presets" /> Style Presets</label>
-              <label><input type="checkbox" id="viz-bpm" /> Show BPM</label>
-              <label><input type="checkbox" id="viz-perf" /> Performance Mode</label>
-            </div>
+          <!-- Floating Customize button + drawer -->
+          <button id="fab-customize" class="md-fab" aria-label="Customize visualizer" title="Customize">✎</button>
 
-            <div class="viz-mode">
-              <div class="orient">
-                <label>Orientation</label>
-                <select id="viz-orient">
-                  <option value="auto" selected>Auto</option>
-                  <option value="portrait">Portrait</option>
-                  <option value="landscape">Landscape</option>
-                </select>
-              </div>
-              <div class="theme">
-                <label>Theme</label>
-                <select id="theme-select">
-                  <option value="dark" selected>Dark</option>
-                  <option value="light">Light</option>
-                </select>
-              </div>
+          <div id="viz-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="viz-drawer-title">
+            <div class="drawer-head">
+              <h3 id="viz-drawer-title">Customize Visualizer</h3>
+              <button id="viz-drawer-close" class="icon-btn" aria-label="Close">✕</button>
             </div>
+            <div class="drawer-content">
+              <div class="customize">
+                <div class="viz-style">
+                  <label>Visualizer</label>
+                  <select id="viz-style">
+                    <option value="bars">Bars</option>
+                    <option value="wave">Wave</option>
+                    <option value="mirror">Mirror Bars</option>
+                    <option value="ring">Ring Wave</option>
+                    <option value="radial">Radial Bars</option>
+                    <option value="particles">Particles</option>
+                    <option value="circle">Circle</option>
+                  </select>
+                </div>
+                <div class="viz-template">
+                  <label>Style Template</label>
+                  <select id="style-template"></select>
+                </div>
+                <div class="viz-colors">
+                  <label>Colors</label>
+                  <input type="color" id="viz-color-1" value="#19d3ae"/>
+                  <input type="color" id="viz-color-2" value="#1e90ff"/>
+                </div>
+                <div class="viz-options">
+                  <label><input type="checkbox" id="viz-glow" checked/> Glow</label>
+                  <label><input type="checkbox" id="viz-trail" checked/> Trail</label>
+                  <label><input type="checkbox" id="viz-art" checked/> Center Art</label>
+                  <label><input type="checkbox" id="viz-style-presets" /> Style Presets</label>
+                  <label><input type="checkbox" id="viz-bpm" /> Show BPM</label>
+                  <label><input type="checkbox" id="viz-perf" /> Performance Mode</label>
+                </div>
 
-            <div class="viz-tuning">
-              <label>Rotation <input type="range" id="viz-rot" min="0" max="3" step="0.01" value="0.6"></label>
-              <label>Decay <input type="range" id="viz-decay" min="0.7" max="0.99" step="0.001" value="0.92"></label>
-              <label>Thickness <input type="range" id="viz-thickness" min="0.5" max="3" step="0.01" value="1"></label>
-              <label>Ring Fill <input type="range" id="viz-ring-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
-              <label>Radial Floor <input type="range" id="viz-radial-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
-              <label>Glow Strength <input type="range" id="viz-glow-strength" min="0" max="24" step="1" value="12"></label>
-              <label>Trail Alpha <input type="range" id="viz-trail-alpha" min="0" max="0.3" step="0.01" value="0.08"></label>
-              <label>Spike Scale <input type="range" id="viz-spike-scale" min="0.5" max="2" step="0.01" value="1"></label>
-              <label>Wave Scale <input type="range" id="viz-wave-scale" min="0.5" max="2" step="0.01" value="1"></label>
-              <label>Segments <input type="range" id="viz-segments" min="1" max="8" step="1" value="4"></label>
-              <label>Beat Sensitivity <input type="range" id="viz-beat-sense" min="0.2" max="2" step="0.05" value="1"></label>
-              <label>Beat Boost <input type="range" id="viz-beat-boost" min="0" max="2" step="0.05" value="1"></label>
-              <label>Beat Threshold <input type="range" id="viz-beat-thresh" min="0" max="0.6" step="0.01" value="0.08"></label>
-              <label>Beat Decay <input type="range" id="viz-beat-decay" min="0.7" max="0.99" step="0.001" value="0.90"></label>
-              <label>Beat Source
-                <select id="viz-beat-src">
-                  <option value="avg" selected>Average</option>
-                  <option value="low">Low</option>
-                  <option value="mid">Mid</option>
-                  <option value="high">High</option>
-                </select>
-              </label>
-              <label>Beat Hold (ms) <input type="range" id="viz-beat-hold" min="0" max="500" step="10" value="120"></label>
-              <label>Pulse Width <input type="range" id="viz-pulse-w" min="0" max="2" step="0.05" value="1"></label>
-              <label>Emphasis Mode
-                <select id="viz-emphasis-mode">
-                  <option value="flat" selected>Flat</option>
-                  <option value="weighted">Weighted</option>
-                </select>
-              </label>
-              <label>Low Emphasis <input type="range" id="viz-low-gain" min="0" max="2" step="0.05" value="1"></label>
-              <label>Mid Emphasis <input type="range" id="viz-mid-gain" min="0" max="2" step="0.05" value="1"></label>
-              <label>High Emphasis <input type="range" id="viz-high-gain" min="0" max="2" step="0.05" value="1"></label>
-              <label>Smoothing <input type="range" id="viz-smooth" min="0.5" max="0.95" step="0.01" value="0.75"></label>
-            </div>
-            <div class="presets">
-              <input type="text" id="preset-name" placeholder="Preset name"/>
-              <button id="save-viz-preset" class="btn">Save Viz Preset</button>
-              <button id="save-eq-preset" class="btn">Save EQ Preset</button>
-              <select id="preset-list"></select>
-              <button id="apply-preset" class="btn">Apply Preset</button>
-              <button id="delete-preset" class="btn">Delete Preset</button>
+                <div class="viz-mode">
+                  <div class="orient">
+                    <label>Orientation</label>
+                    <select id="viz-orient">
+                      <option value="auto" selected>Auto</option>
+                      <option value="portrait">Portrait</option>
+                      <option value="landscape">Landscape</option>
+                    </select>
+                  </div>
+                  <div class="theme">
+                    <label>Theme</label>
+                    <select id="theme-select">
+                      <option value="dark" selected>Dark</option>
+                      <option value="light">Light</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="viz-tuning">
+                  <label>Rotation <input type="range" id="viz-rot" min="0" max="3" step="0.01" value="0.6"></label>
+                  <label>Decay <input type="range" id="viz-decay" min="0.7" max="0.99" step="0.001" value="0.92"></label>
+                  <label>Thickness <input type="range" id="viz-thickness" min="0.5" max="3" step="0.01" value="1"></label>
+                  <label>Ring Fill <input type="range" id="viz-ring-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
+                  <label>Radial Floor <input type="range" id="viz-radial-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
+                  <label>Glow Strength <input type="range" id="viz-glow-strength" min="0" max="24" step="1" value="12"></label>
+                  <label>Trail Alpha <input type="range" id="viz-trail-alpha" min="0" max="0.3" step="0.01" value="0.08"></label>
+                  <label>Spike Scale <input type="range" id="viz-spike-scale" min="0.5" max="2" step="0.01" value="1"></label>
+                  <label>Wave Scale <input type="range" id="viz-wave-scale" min="0.5" max="2" step="0.01" value="1"></label>
+                  <label>Segments <input type="range" id="viz-segments" min="1" max="8" step="1" value="4"></label>
+                  <label>Beat Sensitivity <input type="range" id="viz-beat-sense" min="0.2" max="2" step="0.05" value="1"></label>
+                  <label>Beat Boost <input type="range" id="viz-beat-boost" min="0" max="2" step="0.05" value="1"></label>
+                  <label>Beat Threshold <input type="range" id="viz-beat-thresh" min="0" max="0.6" step="0.01" value="0.08"></label>
+                  <label>Beat Decay <input type="range" id="viz-beat-decay" min="0.7" max="0.99" step="0.001" value="0.90"></label>
+                  <label>Beat Source
+                    <select id="viz-beat-src">
+                      <option value="avg" selected>Average</option>
+                      <option value="low">Low</option>
+                      <option value="mid">Mid</option>
+                      <option value="high">High</option>
+                    </select>
+                  </label>
+                  <label>Beat Hold (ms) <input type="range" id="viz-beat-hold" min="0" max="500" step="10" value="120"></label>
+                  <label>Pulse Width <input type="range" id="viz-pulse-w" min="0" max="2" step="0.05" value="1"></label>
+                  <label>Emphasis Mode
+                    <select id="viz-emphasis-mode">
+                      <option value="flat" selected>Flat</option>
+                      <option value="weighted">Weighted</option>
+                    </select>
+                  </label>
+                  <label>Low Emphasis <input type="range" id="viz-low-gain" min="0" max="2" step="0.05" value="1"></label>
+                  <label>Mid Emphasis <input type="range" id="viz-mid-gain" min="0" max="2" step="0.05" value="1"></label>
+                  <label>High Emphasis <input type="range" id="viz-high-gain" min="0" max="2" step="0.05" value="1"></label>
+                  <label>Smoothing <input type="range" id="viz-smooth" min="0.5" max="0.95" step="0.01" value="0.75"></label>
+                </div>
+                <div class="presets">
+                  <input type="text" id="preset-name" placeholder="Preset name"/>
+                  <button id="save-viz-preset" class="btn">Save Viz Preset</button>
+                  <button id="save-eq-preset" class="btn">Save EQ Preset</button>
+                  <select id="preset-list"></select>
+                  <button id="apply-preset" class="btn">Apply Preset</button>
+                  <button id="delete-preset" class="btn">Delete Preset</button>
+                </div>
+              </div>
             </div>
           </div>
+          <div id="viz-scrim" class="md-scrim" aria-hidden="true"></div>
 
           <div class="eq-header">
             <span>Equalizer</span>
@@ -299,15 +353,7 @@
     </div>
   </main>
 
-  <!-- Bottom Navigation -->
-  <nav class="md-bottomnav" role="navigation" aria-label="Playback controls">
-    <button id="bn-prev" class="icon-btn" aria-label="Previous" title="Previous">◀</button>
-    <button id="bn-play" class="icon-btn primary" aria-label="Play/Pause" title="Play/Pause">⏯</button>
-    <button id="bn-next" class="icon-btn" aria-label="Next" title="Next">▶</button>
-    <button id="bn-shuffle" class="icon-btn" aria-label="Shuffle" title="Shuffle">🔀</button>
-    <button id="bn-repeat" class="icon-btn" aria-label="Repeat" title="Repeat">🔁</button>
-  </nav>
-
+  
   <footer>
     <p>&copy; 2025 Avee-like Player (PHP)</p>
   </footer>
@@ -323,6 +369,26 @@
   <script src="assets/js/logger.js?v=20251020-17"></script>
   <script src="assets/js/toast.js?v=20251020-17"></script>
   <script src="assets/script.js?v=20251020-17"></script>
-  <script src="assets/js/app.js?v=20251020-17"></script>
+  <script>
+    // Drawer open/close handling
+    (function() {
+      function qs(id){ return document.getElementById(id); }
+      const fab = qs('fab-customize');
+      const drawer = qs('viz-drawer');
+      const scrim = qs('viz-scrim');
+      const closeBtn = qs('viz-drawer-close');
+
+      function openDrawer() {
+        if (!drawer) return;
+        drawer.classList.add('open');
+        if (scrim) scrim.classList.add('show');
+      }
+      function closeDrawer() {
+        if (!drawer) return;
+        drawer.classList.remove('open');
+        if (scrim) scrim.classList.remove('show');
+      }
+
+      if (fab) fabcript>
 </body>
 </html>
