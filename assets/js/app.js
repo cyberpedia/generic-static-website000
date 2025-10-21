@@ -707,6 +707,7 @@ ${item.name}`);
       if (active.paused) {
         active.play().then(() => {
           document.getElementById('play').textContent = 'Pause';
+          const bnPlay = document.getElementById('bn-play'); if (bnPlay) bnPlay.classList.add('primary');
           logAction('player.play');
         }).catch(err => {
           console.error('Play toggle error', err);
@@ -716,6 +717,7 @@ ${item.name}`);
         try {
           active.pause();
           document.getElementById('play').textContent = 'Play';
+          const bnPlay = document.getElementById('bn-play'); if (bnPlay) bnPlay.classList.remove('primary');
           logAction('player.pause');
         } catch (err) {
           console.error('Pause toggle error', err);
@@ -741,14 +743,92 @@ ${item.name}`);
     document.getElementById('shuffle').addEventListener('click', () => {
       state.shuffle = !state.shuffle;
       document.getElementById('shuffle').classList.toggle('primary', state.shuffle);
+      const bnShuf = document.getElementById('bn-shuffle'); if (bnShuf) bnShuf.classList.toggle('primary', state.shuffle);
       logAction('player.shuffle', { on: state.shuffle });
     });
 
     document.getElementById('repeat').addEventListener('click', () => {
       state.repeat = !state.repeat;
       document.getElementById('repeat').classList.toggle('primary', state.repeat);
+      const bnRep = document.getElementById('bn-repeat'); if (bnRep) bnRep.classList.toggle('primary', state.repeat);
       logAction('player.repeat', { on: state.repeat });
     });
+
+    // AppBar: top search/rescan/upload/import mirroring library actions
+    const topSearch = document.getElementById('top-search');
+    if (topSearch) {
+      topSearch.addEventListener('input', (e) => {
+        const q = e.target.value;
+        logAction('library.search.top', { q }, 'search.top', 300);
+        filterLibrary(q);
+        const libSearch = document.getElementById('search'); if (libSearch) libSearch.value = q;
+      });
+    }
+    const topRescan = document.getElementById('top-rescan');
+    if (topRescan) {
+      topRescan.addEventListener('click', async () => {
+        logAction('library.rescan.top');
+        await loadLibrary(true);
+        notify('Library refreshed', 'success', 2500);
+      });
+    }
+    const topImportBtn = document.getElementById('top-import-btn');
+    if (topImportBtn) {
+      topImportBtn.addEventListener('click', async () => {
+        const url = (document.getElementById('top-import-url').value || '').trim();
+        if (!url) return;
+        logAction('import.url.top', { url });
+        const res = await API.post('api/remote_import.php', { url });
+        if (!res.ok) {
+          notify(res.error || 'Import failed', 'error');
+          logAction('import.url.top.error', { error: res.error || 'failed' });
+        } else {
+          notify('Imported audio from URL', 'success');
+          logAction('import.url.top.success');
+          try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
+        }
+        await loadLibrary(true);
+      });
+    }
+    const topUpload = document.getElementById('top-upload-input');
+    if (topUpload) {
+      topUpload.addEventListener('change', async () => {
+        const files = Array.from(topUpload.files || []);
+        logAction('upload.files.top', files.map(f => ({ name: f.name, size: f.size })));
+        let okCount = 0, errCount = 0;
+        for (const f of files) {
+          try {
+            const res = await API.upload('api/upload.php', f);
+            logAction('upload.result.top', res);
+            if (res.ok) okCount++;
+            else { errCount++; notify(res.error || `Upload failed: ${f.name}`, 'error'); }
+          } catch (err) {
+            console.error('Upload failed', err);
+            errCount++;
+            notify(`Upload failed: ${f.name}`, 'error');
+            logAction('upload.error.top', { message: err.message });
+          }
+        }
+        try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
+        await loadLibrary(true);
+        if (okCount > 0) notify(`Uploaded ${okCount} file(s)`, 'success');
+        if (errCount > 0) notify(`${errCount} upload(s) failed`, 'error');
+        topUpload.value = '';
+      });
+    }
+
+    // BottomNav: delegate to existing controls
+    const bnPrev = document.getElementById('bn-prev');
+    const bnPlay = document.getElementById('bn-play');
+    const bnNext = document.getElementById('bn-next');
+    const bnShuffle = document.getElementById('bn-shuffle');
+    const bnRepeat = document.getElementById('bn-repeat');
+
+    if (bnPrev) bnPrev.addEventListener('click', () => document.getElementById('prev').click());
+    if (bnNext) bnNext.addEventListener('click', () => document.getElementById('next').click());
+    if (bnShuffle) bnShuffle.addEventListener('click', () => document.getElementById('shuffle').click());
+    if (bnRepeat) bnRepeat.addEventListener('click', () => document.getElementById('repeat').click());
+    if (bnPlay) bnPlay.addEventListener('click', () => document.getElementById('play').click());
 
     document.getElementById('volume').addEventListener('input', (e) => {
       const v = Number(e.target.value);

@@ -9,8 +9,23 @@
   <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Avee-like Media Player</h1>
+  <header class="md-appbar" role="banner">
+    <div class="appbar-row">
+      <button id="top-menu" class="icon-btn" aria-label="Menu" title="Menu">☰</button>
+      <div class="appbar-title">Avee-like Media Player</div>
+      <div class="appbar-actions">
+        <input type="text" id="top-search" class="appbar-input" placeholder="Search…" aria-label="Search" />
+        <label class="upload-btn appbar-upload" title="Upload audio files">
+          Upload
+          <input type="file" id="top-upload-input" accept="audio/*" multiple />
+        </label>
+        <button id="top-rescan" class="btn secondary" title="Rescan music folder" aria-label="Rescan">Rescan</button>
+        <div class="import-inline" aria-label="Import from URL">
+          <input type="url" id="top-import-url" class="appbar-input" placeholder="Import URL" aria-label="Import URL"/>
+          <button id="top-import-btn" class="btn secondary" title="Import from URL" aria-label="Import">Import</button>
+        </div>
+      </div>
+    </div>
   </header>
 
   <main>
@@ -284,7 +299,15 @@
     </div>
   </main>
 
-  
+  <!-- Bottom Navigation -->
+  <nav class="md-bottomnav" role="navigation" aria-label="Playback controls">
+    <button id="bn-prev" class="icon-btn" aria-label="Previous" title="Previous">◀</button>
+    <button id="bn-play" class="icon-btn primary" aria-label="Play/Pause" title="Play/Pause">⏯</button>
+    <button id="bn-next" class="icon-btn" aria-label="Next" title="Next">▶</button>
+    <button id="bn-shuffle" class="icon-btn" aria-label="Shuffle" title="Shuffle">🔀</button>
+    <button id="bn-repeat" class="icon-btn" aria-label="Repeat" title="Repeat">🔁</button>
+  </nav>
+
   <footer>
     <p>&copy; 2025 Avee-like Player (PHP)</p>
   </footer>

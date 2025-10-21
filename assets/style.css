@@ -86,21 +86,51 @@ body.light .viz-mode select {
   color: #1d2433;
 }
 
-header {
+/* Material AppBar */
+.md-appbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   background: #0d0f14;
   color: #fff;
-  padding: 1.0rem 0;
-  text-align: center;
-  letter-spacing: 0.02em;
-  box-shadow: none;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #1c2236;
 }
-@media (max-width: 600px) {
-  header {
-    padding: 0.8rem 0;
-  }
-  header h1 {
-    font-size: 1.05rem;
-    margin: 0;
+.md-appbar .appbar-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+.md-appbar .appbar-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.md-appbar .appbar-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.md-appbar .appbar-input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #3a4155;
+  background: #0f1322;
+  color: #e6e6e9;
+  border-radius: 8px;
+}
+.md-appbar .import-inline {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+@media (max-width: 840px) {
+  .md-appbar .appbar-actions {
+    display: none; /* keep appbar compact on phones; use sidebars for actions */
   }
 }
 
@@ -133,11 +163,46 @@ footer {
   box-shadow: none;
   flex-shrink: 0;
 }
+
+/* Material Bottom Navigation */
+.md-bottomnav {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  z-index: 1000;
+  background: #0d0f14;
+  border-top: 1px solid #1c2236;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  background: #3a414f;
+  color: #e6e6e9;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.icon-btn.primary {
+  background: #2e7be7;
+  color: #fff;
+}
 @media (max-width: 600px) {
   footer {
     padding: 0.9rem 0;
     border-radius: 0;
     font-size: 0.95rem;
+    padding-bottom: calc(0.9rem + 64px); /* avoid overlap with fixed bottomnav */
+  }
+  main {
+    padding-bottom: 80px; /* avoid bottomnav overlay on content */
   }
 }
 
