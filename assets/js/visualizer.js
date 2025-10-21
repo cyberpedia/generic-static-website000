@@ -311,8 +311,14 @@
       const dpr = window.devicePixelRatio || 1;
       if (this.forcedW && this.forcedH) {
         // Use forced pixel resolution
+        this.canvas.width = Math.floor(this.forcedW * dpr);
+        this.canvas.height = Math.floor(this.forcedH * dpr);
+      } else {
+        const w = this.canvas.clientWidth;
+        const h = this.canvas.clientHeight;
         this.canvas.width = Math.floor(w * dpr);
-      this.canvas.height = Math.floor(h * dpr);
+        this.canvas.height = Math.floor(h * dpr);
+      }
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
@@ -332,16 +338,28 @@
         waveScale: params.waveScale ?? this.waveScale,
         segments: params.segments ?? this.segments,
         rotation: params.rotation ?? this.rotation,
+        // position/transform
+        offsetX: params.offsetX ?? 0,
+        offsetY: params.offsetY ?? 0,
+        scale: params.scale ?? 1.0,
+        // beat sync
+        beatSync: params.beatSync ?? true,
+        beatMode: params.beatMode ?? 'scale', // 'scale' | 'rotate' | 'alpha' | 'pulse'
         // per-layer blending
         blend: params.blend ?? (style === 'background' ? 'source-over' : 'lighter'),
         alpha: params.alpha ?? (style === 'background' ? 1.0 : 1.0),
         // image/background extras
         imgSrc: params.imgSrc ?? null,
         imgFit: params.imgFit ?? 'cover',
-        img: null
+        img: null,
+        // logo/clipart/title
+        shape: params.shape ?? 'circle', // for logo/clipart clipping
+        textColor: params.textColor ?? '#ffffff',
+        titleAlign: params.titleAlign ?? 'bottom', // for title layer
+        titleText: params.titleText ?? null
       };
       // Preload image layer if imgSrc provided
-      if (style === 'image' && L.imgSrc) {
+      if ((style === 'image' || style === 'logo' || style === 'clipart') && L.imgSrc) {
         this.loadImageForLayer(L, L.imgSrc);
       }
       this.layers.push(L);
@@ -543,7 +561,8 @@
         this.forcedW = w;
         this.forcedH = h;
       }
-      this }
+      this.resize();
+    }
 
     getStereoSpectrum(bins, gamma = 1.0, floorOverride = null) {
       if (!this.analyserL || !this.analyserR) {
@@ -774,19 +793,51 @@
 
         // per-layer blend and alpha (overlay)
         const blendMode = (L.blend || 'source-over');
-        const alpha = (typeof L.alpha === 'number') ? Math.max(0, Math.min(1, L.alpha)) : 1.0;
+        let alpha = (typeof L.alpha === 'number') ? Math.max(0, Math.min(1, L.alpha)) : 1.0;
+
+        // beat-driven alpha if requested
+        if (L.beatSync && L.beatMode === 'alpha') {
+          const beat = Math.max(0, this.beatLevel) * this.beatBoost;
+          alpha = Math.max(0.3, alpha * (1 - beat * 0.6));
+        }
+
         this.ctx.globalCompositeOperation = blendMode;
         this.ctx.globalAlpha = alpha;
 
+        // transforms: offset, scale, rotation, beat-driven scale/rotate
+        this.ctx.save();
+        const offX = L.offsetX || 0, offY = L.offsetY || 0;
+        if (offX || offY) this.ctx.translate(offX, offY);
+
+        let scaleMul = (typeof L.scale === 'number') ? L.scale : 1.0;
+        let rotMul = 0;
+        if (L.beatSync) {
+          const beat = Math.max(0, this.beatLevel) * this.beatBoost;
+          if (L.beatMode === 'scale' || L.beatMode === 'pulse') {
+            scaleMul *= (1 + beat * (L.beatMode === 'pulse' ? 0.5 : 0.25));
+          } else if (L.beatMode === 'rotate') {
+            rotMul = beat * 0.4;
+          }
+        }
+        if (scaleMul !== 1.0) this.ctx.scale(scaleMul, scaleMul);
+        if (rotMul) this.ctx.rotate(rotMul);
+
         if (style === 'image') {
           this.drawImage(w, h, L);
+        } else if (style === 'logo') {
+          this.drawLogo(w, h, L);
+        } else if (style === 'clipart') {
+          this.drawClipart(w, h, L);
+        } else if (style === 'title') {
+          this.drawTitle(w, h, L);
         } else if (style === 'bars') this.drawBars(w, h, L);
         else if (style === 'wave') this.drawWave(w, h, L);
         else if (style === 'radial') this.drawRadialBars(w, h, L);
         else if (style === 'ring') this.drawRingWave(w, h, L);
         else if (style === 'mirror') this.drawMirrorBars(w, h, L);
-        else if (style === 'particles') this.drawParticles(w, h, L);
         else this.drawCircle(w, h, L);
+
+        this.ctx.restore();
       }
 
       // reset composite/alpha for overlays
@@ -1172,6 +1223,160 @@
 
       this.ctx.drawImage(img, dx, dy, dw, dh);
     }
+
+    // --- Logo / Clipart / Title ---------------------------------------------
+
+    drawLogo(w, h, L) {
+      const cx = w / 2, cy = h / 2;
+      const size = Math.min(w, h) / 4;
+      const shape = (L?.shape || 'circle');
+      const img = L?.img;
+      this.ctx.save();
+      // build shape path
+      this.ctx.beginPath();
+      if (shape === 'circle') {
+        this.ctx.arc(cx, cy, size, 0, Math.PI * 2);
+      } else if (shape === 'square') {
+        const s = size * 1.6;
+        ctxRoundRect(this.ctx, cx - s/2, cy - s/2, s, s, 8);
+      } else if (shape === 'rounded') {
+        const s = size * 1.8;
+        ctxRoundRect(this.ctx, cx - s/2, cy - s/2, s, s, 18);
+      } else if (shape === 'hex') {
+        const r = size;
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i + Math.PI / 6;
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r;
+          if (i === 0) this.ctx.moveTo(x, y); else this.ctx.lineTo(x, y);
+        }
+        this.ctx.closePath();
+      } else if (shape === 'star') {
+        const outer = size, inner = size * 0.52;
+        for (let i = 0; i < 10; i++) {
+          const r = (i % 2 === 0) ? outer : inner;
+          const a = (Math.PI / 5) * i - Math.PI / 2;
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r;
+          if (i === 0) this.ctx.moveTo(x, y); else this.ctx.lineTo(x, y);
+        }
+        this.ctx.closePath();
+      } else {
+        this.ctx.arc(cx, cy, size, 0, Math.PI * 2);
+      }
+
+      if (img) {
+        this.ctx.clip();
+        // draw contained image inside the shape
+        const iw = img.width, ih = img.height;
+        const scale = Math.max((size * 2) / iw, (size * 2) / ih);
+        const dw = Math.round(iw * scale);
+        const dh = Math.round(ih * scale);
+        const dx = Math.round(cx - dw / 2);
+        const dy = Math.round(cy - dh / 2);
+        this.ctx.drawImage(img, dx, dy, dw, dh);
+      } else {
+        // fill shape with gradient
+        const grad = API.gradient(this.ctx, L?.color1 || this.color1, L?.color2 || this.color2, w, h);
+        this.ctx.fillStyle = grad;
+        this.ctx.fill();
+      }
+      this.ctx.restore();
+    }
+
+    drawClipart(w, h, L) {
+      // clipart behaves like image with optional shape mask
+      if (!L?.img) return this.drawLogo(w, h, L); // fallback to logo fill
+      if (L.shape && L.shape !== 'none') {
+        // draw as logo with image clipped
+        this.drawLogo(w, h, L);
+      } else {
+        // raw image fit at center
+        const cx = w / 2, cy = h / 2;
+        const img = L.img;
+        const iw = img.width, ih = img.height;
+        const scale = Math.min((w * 0.8) / iw, (h * 0.8) / ih);
+        const dw = Math.round(iw * scale);
+        const dh = Math.round(ih * scale);
+        const dx = Math.round(cx - dw / 2);
+        const dy = Math.round(cy - dh / 2);
+        this.ctx.drawImage(img, dx, dy, dw, dh);
+      }
+    }
+
+    drawTitle(w, h, L) {
+      const text = (L?.titleText) ?? (this.trackTitle || '');
+      if (!text) return;
+      const align = (L?.titleAlign || 'bottom');
+      const size = Math.max(14, Math.round(h * 0.06));
+      const pulse = Math.max(0, this.beatLevel) * this.beatBoost;
+      this.ctx.save();
+      this.ctx.shadowBlur = 0;
+      this.ctx.fillStyle = L?.textColor || '#ffffff';
+      this.ctx.font = `${Math.round(size * (1 + pulse * 0.15))}px system-ui, sans-serif`;
+      this.ctx.textAlign = 'center';
+      let y = h - 14;
+      if (align === 'top') y = 24;
+      else if (align === 'middle') y = Math.round(h / 2);
+      this.ctx.fillText(text, Math.round(w / 2), y);
+      this.ctx.restore();
+    }
+
+    // --- Layer transforms & sync setters -------------------------------------
+
+    reorderLayer(from, to) {
+      const f = Number(from), t = Number(to);
+      if (isNaN(f) || isNaN(t)) return false;
+      if (f < 0 || f >= this.layers.length || t < 0 || t >= this.layers.length) return false;
+      const [item] = this.layers.splice(f, 1);
+      this.layers.splice(t, 0, item);
+      this.sel = t;
+      return true;
+    }
+
+    setLayerOffset(x, y) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      const L = this.layers[this.sel];
+      L.offsetX = Number(x) || 0;
+      L.offsetY = Number(y) || 0;
+    }
+
+    setLayerScale(s) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      const L = this.layers[this.sel];
+      L.scale = Math.max(0.2, Math.min(4, Number(s) || 1));
+    }
+
+    setLayerBeatSync(on) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      this.layers[this.sel].beatSync = !!on;
+    }
+
+    setLayerBeatMode(mode) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      const m = String(mode || '').toLowerCase();
+      this.layers[this.sel].beatMode = ['scale','rotate','alpha','pulse'].includes(m) ? m : 'scale';
+    }
+
+    setLayerShape(shape) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      const s = String(shape || '').toLowerCase();
+      this.layers[this.sel].shape = ['circle','square','rounded','hex','star','none'].includes(s) ? s : 'circle';
+    }
+
+    setLayerTextColor(color) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      this.layers[this.sel].textColor = String(color || '#ffffff');
+    }
+
+    setLayerTitleAlign(align) {
+      if (this.sel < 0 || this.sel >= this.layers.length) return;
+      const a = String(align || '').toLowerCase();
+      this.layers[this.sel].titleAlign = ['top','middle','bottom'].includes(a) ? a : 'bottom';
+    }
+
+    setTrackTitle(title) { this.trackTitle = String(title || ''); }
+    setTrackArtist(artist) { this.trackArtist = String(artist || ''); }
   }
 
   function lerpColor(c1, c2, t) {

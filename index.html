@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Avee-like Media Player (PHP/XAMPP)</title>
-  <link rel="stylesheet" href="assets/style.css?v=20251020-21">
+  <link rel="stylesheet" href="assets/style.css?v=20251020-22">
   
   <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
@@ -111,6 +111,9 @@
             <button class="icon-btn" data-type="wave">＋ Add Wave</button>
             <button class="icon-btn" data-type="particles">＋ Add Particles</button>
             <button class="icon-btn" data-type="image">＋ Add Image</button>
+            <button class="icon-btn" data-type="logo">＋ Add Logo</button>
+            <button class="icon-btn" data-type="clipart">＋ Add Clipart</button>
+            <button class="icon-btn" data-type="title">＋ Add Title</button>
             <button class="icon-btn" data-type="background">＋ Add Background</button>
           </div>
           <div id="viz-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="viz-drawer-title">
@@ -256,6 +259,9 @@
                       <option value="particles">Particles</option>
                       <option value="circle">Circle</option>
                       <option value="image">Image</option>
+                      <option value="logo">Logo</option>
+                      <option value="clipart">Clipart</option>
+                      <option value="title">Title</option>
                       <option value="background">Background</option>
                     </select>
                   </div>
@@ -302,6 +308,63 @@
                       <option value="stretch">Stretch</option>
                       <option value="tile">Tile</option>
                     </select>
+                  </div>
+
+                  <!-- Position & transform -->
+                  <div class="viz-style">
+                    <label>Position X <input type="range" id="layer-pos-x" min="-500" max="500" step="1" value="0"></label>
+                  </div>
+                  <div class="viz-style">
+                    <label>Position Y <input type="range" id="layer-pos-y" min="-500" max="500" step="1" value="0"></label>
+                  </div>
+                  <div class="viz-style">
+                    <label>Scale <input type="range" id="layer-scale" min="0.25" max="3" step="0.05" value="1"></label>
+                  </div>
+
+                  <!-- Beat sync & mode -->
+                  <div class="viz-style">
+                    <label><input type="checkbox" id="layer-beat-sync" checked/> Beat Sync</label>
+                  </div>
+                  <div class="viz-style">
+                    <label>Beat Mode
+                      <select id="layer-beat-mode">
+                        <option value="scale" selected>Scale</option>
+                        <option value="pulse">Pulse</option>
+                        <option value="rotate">Rotate</option>
+                        <option value="alpha">Opacity</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <!-- Logo/Clipart specific -->
+                  <div class="viz-style">
+                    <label>Shape
+                      <select id="layer-shape">
+                        <option value="circle" selected>Circle</option>
+                        <option value="square">Square</option>
+                        <option value="rounded">Rounded</option>
+                        <option value="hex">Hex</option>
+                        <option value="star">Star</option>
+                        <option value="none">None</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <!-- Title layer -->
+                  <div class="viz-style">
+                    <label>Title Text <input type="text" id="layer-title-text" placeholder="(Use current track title if empty)"></label>
+                  </div>
+                  <div class="viz-style">
+                    <label>Title Color <input type="color" id="layer-title-color" value="#ffffff"></label>
+                  </div>
+                  <div class="viz-style">
+                    <label>Title Align
+                      <select id="layer-title-align">
+                        <option value="bottom" selected>Bottom</option>
+                        <option value="middle">Middle</option>
+                        <option value="top">Top</option>
+                      </select>
+                    </label>
                   </div>
                 </div>
 
@@ -416,16 +479,16 @@
   
 
   <!-- Correct script includes (loaded before inline menu logic) -->
-  <script src="assets/js/utils.js?v=20251020-21"></script>
-  <script src="assets/js/equalizer.js?v=20251020-21"></script>
-  <script src="assets/js/visualizer.js?v=20251020-21"></script>
-  <script src="assets/js/playlists.js?v=20251020-21"></script>
-  <script src="assets/js/settings.js?v=20251020-21"></script>
-  <script src="assets/js/cloud.js?v=20251020-21"></script>
-  <script src="assets/js/logger.js?v=20251020-21"></script>
-  <script src="assets/js/toast.js?v=20251020-21"></script>
-  <script src="assets/script.js?v=20251020-21"></script>
-  <script src="assets/js/app.js?v=20251020-21"></script>
+  <script src="assets/js/utils.js?v=20251020-22"></script>
+  <script src="assets/js/equalizer.js?v=20251020-22"></script>
+  <script src="assets/js/visualizer.js?v=20251020-22"></script>
+  <script src="assets/js/playlists.js?v=20251020-22"></script>
+  <script src="assets/js/settings.js?v=20251020-22"></script>
+  <script src="assets/js/cloud.js?v=20251020-22"></script>
+  <script src="assets/js/logger.js?v=20251020-22"></script>
+  <script src="assets/js/toast.js?v=20251020-22"></script>
+  <script src="assets/script.js?v=20251020-22"></script>
+  <script src="assets/js/app.js?v=20251020-22"></script>
   <script>
     // Single FAB opens floating Layers panel; + opens type menu; gear opens Layers drawer
     (function() {

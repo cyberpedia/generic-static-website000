@@ -358,6 +358,7 @@ ${item.name}`);
     // Update UI info
     document.getElementById('track-title').textContent = track.name || track.path;
     state.currentTrack = { path: track.path, name: track.name };
+    try { if (state.viz && state.viz.setTrackTitle) state.viz.setTrackTitle(track.name || track.path); } catch (_) {}
 
     const useA = state.useA;
 
@@ -1247,6 +1248,73 @@ ${item.name}`);
       });
     });
 
+    // Position & transform
+    const lPosX = document.getElementById('layer-pos-x');
+    const lPosY = document.getElementById('layer-pos-y');
+    const lScale = document.getElementById('layer-scale');
+    const lBeatSync = document.getElementById('layer-beat-sync');
+    const lBeatMode = document.getElementById('layer-beat-mode');
+    const lShape = document.getElementById('layer-shape');
+    const lTitleText = document.getElementById('layer-title-text');
+    const lTitleColor = document.getElementById('layer-title-color');
+    const lTitleAlign = document.getElementById('layer-title-align');
+
+    if (lPosX) lPosX.addEventListener('input', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setLayerOffset) state.viz.setLayerOffset(Number(e.target.value), Number(lPosY?.value || 0));
+        logAction('layer.edit.posX', { value: Number(e.target.value) }, 'layer-pos-x');
+      });
+    });
+    if (lPosY) lPosY.addEventListener('input', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setLayerOffset) state.viz.setLayerOffset(Number(lPosX?.value || 0), Number(e.target.value));
+        logAction('layer.edit.posY', { value: Number(e.target.value) }, 'layer-pos-y');
+      });
+    });
+    if (lScale) lScale.addEventListener('input', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setLayerScale) state.viz.setLayerScale(Number(e.target.value));
+        logAction('layer.edit.scale', { value: Number(e.target.value) }, 'layer-scale');
+      });
+    });
+    if (lBeatSync) lBeatSync.addEventListener('change', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setLayerBeatSync) state.viz.setLayerBeatSync(!!e.target.checked);
+        logAction('layer.edit.beatSync', { on: !!e.target.checked });
+      });
+    });
+    if (lBeatMode) lBeatMode.addEventListener('change', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setLayerBeatMode) state.viz.setLayerBeatMode(e.target.value);
+        logAction('layer.edit.beatMode', { value: e.target.value });
+      });
+    });
+    if (lShape) lShape.addEventListener('change', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setLayerShape) state.viz.setLayerShape(e.target.value);
+        logAction('layer.edit.shape', { value: e.target.value });
+      });
+    });
+    if (lTitleText) lTitleText.addEventListener('input', (e) => {
+      withSel((L) => {
+        L.titleText = e.target.value || null;
+        renderLayersUI();
+        logAction('layer.edit.titleText', { value: e.target.value }, 'layer-title-text');
+      });
+    });
+    if (lTitleColor) lTitleColor.addEventListener('change', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setLayerTextColor) state.viz.setLayerTextColor(e.target.value);
+        logAction('layer.edit.titleColor', { value: e.target.value });
+      });
+    });
+    if (lTitleAlign) lTitleAlign.addEventListener('change', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setLayerTitleAlign) state.viz.setLayerTitleAlign(e.target.value);
+        logAction('layer.edit.titleAlign', { value: e.target.value });
+      });
+    });
+
     document.getElementById('eq-toggle').addEventListener('click', () => {
       const panel = document.getElementById('eq-panel');
       panel.classList.toggle('show');
@@ -1664,6 +1732,26 @@ ${state.currentTrack.name || state.currentTrack.path}`);
         li.appendChild(name);
         li.appendChild(actions);
 
+        // Drag-and-drop reordering
+        li.draggable = true;
+        li.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', String(idx));
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        li.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        li.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const from = Number(e.dataTransfer.getData('text/plain'));
+          const to = idx;
+          if (!isNaN(from) && !isNaN(to) && from !== to && state.viz && state.viz.reorderLayer) {
+            state.viz.reorderLayer(from, to);
+            renderLayersUI();
+          }
+        });
+
         li.addEventListener('click', () => {
           state.viz.selectLayer(idx);
           renderLayersUI();
@@ -1687,6 +1775,7 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       if (!state.viz || state.viz.sel < 0) return;
       const L = state.viz.layers[state.viz.sel];
       const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = String(val); };
+      const setChecked = (id, on) => { const el = document.getElementById(id); if (el) el.checked = !!on; };
       const setShow = (id, on) => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -1709,6 +1798,13 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       setVal('layer-edit-blend', (typeof L.blend !== 'undefined' ? L.blend : 'lighter'));
       setVal('layer-edit-alpha', (typeof L.alpha !== 'undefined' ? L.alpha : 1));
 
+      // Position/transform
+      setVal('layer-pos-x', (typeof L.offsetX !== 'undefined' ? L.offsetX : 0));
+      setVal('layer-pos-y', (typeof L.offsetY !== 'undefined' ? L.offsetY : 0));
+      setVal('layer-scale', (typeof L.scale !== 'undefined' ? L.scale : 1));
+      setChecked('layer-beat-sync', !!L.beatSync);
+      setVal('layer-beat-mode', (typeof L.beatMode !== 'undefined' ? L.beatMode : 'scale'));
+
       // Image fields visibility and values
       const isImage = (String(L.style).toLowerCase() === 'image');
       setVal('layer-edit-image-url', L.imgSrc || '');
@@ -1717,6 +1813,21 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       setShow('layer-edit-image-load', isImage);
       setShow('layer-edit-image-file', isImage);
       setShow('layer-edit-img-fit', isImage);
+
+      // Logo/Clipart shape
+      const isLogo = (String(L.style).toLowerCase() === 'logo');
+      const isClip = (String(L.style).toLowerCase() === 'clipart');
+      setVal('layer-shape', (typeof L.shape !== 'undefined' ? L.shape : 'circle'));
+      setShow('layer-shape', isLogo || isClip);
+
+      // Title layer specifics
+      const isTitle = (String(L.style).toLowerCase() === 'title');
+      setVal('layer-title-text', (typeof L.titleText !== 'undefined' ? (L.titleText || '') : ''));
+      setVal('layer-title-color', (typeof L.textColor !== 'undefined' ? L.textColor : '#ffffff'));
+      setVal('layer-title-align', (typeof L.titleAlign !== 'undefined' ? L.titleAlign : 'bottom'));
+      setShow('layer-title-text', isTitle);
+      setShow('layer-title-color', isTitle);
+      setShow('layer-title-align', isTitle);
 
       // Style-specific visibility: show only controls relevant to the selected layer style
       const s = String(L.style || 'circle').toLowerCase();
@@ -1734,10 +1845,8 @@ ${state.currentTrack.name || state.currentTrack.path}`);
         ['layer-thickness','layer-edit-segments'].forEach(id => showIds.add(id));
       } else if (s === 'circle') {
         ['layer-rot','layer-decay','layer-thickness','layer-ring-floor','layer-spike-scale','layer-edit-segments'].forEach(id => showIds.add(id));
-      } else if (s === 'image') {
-        // image fields already shown above; hide most tuning sliders
-      } else if (s === 'background') {
-        // background: just colors; tuning sliders hidden
+      } else if (s === 'image' || s === 'logo' || s === 'clipart' || s === 'background' || s === 'title') {
+        // specific controls handled above; tuning sliders mostly hidden
       }
 
       // Always show blend/alpha overlays regardless of style
