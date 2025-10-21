@@ -141,7 +141,57 @@ footer {
   }
 }
 
-/* Studio layout: vertical stack, centered panels */
+/* Material Responsive Grid (M2): 4 cols (xs), 8 cols (sm ≥840px), 12 cols (md ≥1200px) */
+.md-container {
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(10px, 2.4vw, 18px);
+}
+.md-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (min-width: 840px) {
+  .md-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+@media (min-width: 1200px) {
+  .md-grid {
+    grid-template-columns: repeat(12, 1fr);
+  }
+}
+
+/* App layout using Material grid */
+.md-grid.app-grid {
+  /* default to single-column stack on phones */
+  grid-auto-rows: minmax(10px, auto);
+}
+.md-grid.app-grid .player-core { grid-column: 1 / -1; order: 1; }
+.md-grid.app-grid .library     { grid-column: 1 / -1; order: 2; }
+.md-grid.app-grid .playlists   { grid-column: 1 / -1; order: 3; }
+
+@media (min-width: 840px) {
+  .md-grid.app-grid .library   { grid-column: 1 / span 2; }
+  .md-grid.app-grid .player-core{ grid-column: 3 / span 4; }
+  .md-grid.app-grid .playlists { grid-column: 7 / span 2; }
+}
+@media (min-width: 1200px) {
+  .md-grid.app-grid .library   { grid-column: 1 / span 3; }
+  .md-grid.app-grid .player-core{ grid-column: 4 / span 6; }
+  .md-grid.app-grid .playlists { grid-column: 10 / span 3; }
+}
+
+/* Allow panels/cards to fill their grid cell */
+.md-grid.app-grid .viz-layout,
+.md-grid.app-grid .sidebar {
+  width: 100%;
+  margin: 0;
+}
+
+/* Legacy studio layout (no longer used) kept for safety */
 .studio {
   display: flex;
   flex-direction: column;
@@ -155,8 +205,6 @@ footer {
   max-width: clamp(320px, 92vw, 900px);
   margin: 0 auto;
 }
-
-/* Visual order: player first, library second, playlists third */
 .studio .player-core { order: 1; }
 .studio .library { order: 2; }
 .studio .playlists { order: 3; }
