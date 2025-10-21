@@ -502,9 +502,20 @@
       if (addBtn) addBtn.addEventListener('click', toggleMenu);
 
       function addLayerOfType(type) {
-        if (!window.App || !App.state || !App.state.viz) {
+        if (!window.App) {
           console.warn('App not ready yet');
           try { Toast && Toast.show('App is loading, try again in a second', 'info'); } catch (_) {}
+          return;
+        }
+        // Ensure AudioContext/Visualizer initialized
+        try { App.ensureAudioContext && App.ensureAudioContext(); } catch (_) {}
+        if (!App.state || !App.state.viz) {
+          // Retry shortly after initialization
+          setTimeout(() => {
+            try { App.ensureAudioContext && App.ensureAudioContext(); } catch (_) {}
+            if (App.state && App.state.viz) addLayerOfType(type);
+            else { try { Toast && Toast.show('Initializing… try again', 'info'); } catch (_) {} }
+          }, 150);
           return;
         }
         try {
@@ -520,12 +531,20 @@
             spikeScale: Number(qs('viz-spike-scale')?.value || 1),
             waveScale: Number(qs('viz-wave-scale')?.value || 1),
             segments: Math.max(1, Math.min(8, seg)),
-            blend: 'lighter',
+            blend: type === 'background' ? 'source-over' : 'lighter',
             alpha: 1
           });
           App.state.viz.selectLayer(idx);
           if (App.renderLayersUI) App.renderLayersUI();
           try { Toast && Toast.show('Layer added', 'success', 1500); } catch (_) {}
+          // Open full layer editor for immediate customization
+          try {
+            const d = document.getElementById('layers-drawer');
+            const s = document.getElementById('layers-scrim');
+            if (d) d.classList.add('open');
+            if (s) s.classList.add('show');
+            App.syncLayerEditForm && App.syncLayerEditForm();
+          } catch (_) {}
           closeMenu();
         } catch (err) {
           console.error('Add layer failed', err);

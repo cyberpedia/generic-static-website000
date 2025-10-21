@@ -1208,26 +1208,7 @@ ${item.name}`);
         renderLayersUI();
         logAction('layer.edit.imgFit', { fit });
       });
-    });g) leSeg.addEventListener('input', (e) => {
-      withSel(() => {
-        if (state.viz && state.viz.setSegments) state.viz.setSegments(Number(e.target.value));
-        logAction('layer.edit.segments', { value: Number(e.target.value) }, 'layer-edit-segments');
-      });
     });
-    if (leBlend) leBlend.addEventListener('change', (e) => {
-      withSel((L) => { L.blend = e.target.value; renderLayersUI(); syncLayerEditForm(); logAction('layer.edit.blend', { value: e.target.value }); });
-    });
-    if (leAlpha) leAlpha.addEventListener('input', (e) => {
-      withSel((L) => { L.alpha = Number(e.target.value); renderLayersUI(); logAction('layer.edit.alpha', { value: Number(e.target.value) }, 'layer-edit-alpha'); });
-    });
-
-    if (lRot) lRot.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRotationSpeed) state.viz.setRotationSpeed(Number(e.target.value)); }); logAction('layer.edit.rot', { value: Number(e.target.value) }, 'layer-rot'); });
-    if (lDec) lDec.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setDecay) state.viz.setDecay(Number(e.target.value)); }); logAction('layer.edit.decay', { value: Number(e.target.value) }, 'layer-decay'); });
-    if (lTh) lTh.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setThickness) state.viz.setThickness(Number(e.target.value)); }); logAction('layer.edit.thickness', { value: Number(e.target.value) }, 'layer-thickness'); });
-    if (lRing) lRing.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRingFloor) state.viz.setRingFloor(Number(e.target.value)); }); logAction('layer.edit.ringFloor', { value: Number(e.target.value) }, 'layer-ring-floor'); });
-    if (lRad) lRad.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRadialFloor) state.viz.setRadialFloor(Number(e.target.value)); }); logAction('layer.edit.radialFloor', { value: Number(e.target.value) }, 'layer-radial-floor'); });
-    if (lSpike) lSpike.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setSpikeScale) state.viz.setSpikeScale(Number(e.target.value)); }); logAction('layer.edit.spikeScale', { value: Number(e.target.value) }, 'layer-spike-scale'); });
-    if (lWave) lWave.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setWaveScale) state.viz.setWaveScale(Number(e.target.value)); }); logAction('layer.edit.waveScale', { value: Number(e.target.value) }, 'layer-wave-scale'); });
 
     document.getElementById('eq-toggle').addEventListener('click', () => {
       const panel = document.getElementById('eq-panel');
@@ -1670,10 +1651,11 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       const setShow = (id, on) => {
         const el = document.getElementById(id);
         if (!el) return;
-        const wrap = el.closest('.viz-style') || el.parentElement;
+        const wrap = el.closest('label') || el.closest('.viz-style') || el.parentElement;
         if (wrap) wrap.style.display = on ? '' : 'none';
       };
 
+      // Selected layer values
       setVal('layer-edit-style', L.style || 'circle');
       setVal('layer-edit-color-1', L.color1 || '#19d3ae');
       setVal('layer-edit-color-2', L.color2 || '#1e90ff');
@@ -1696,6 +1678,36 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       setShow('layer-edit-image-load', isImage);
       setShow('layer-edit-image-file', isImage);
       setShow('layer-edit-img-fit', isImage);
+
+      // Style-specific visibility: show only controls relevant to the selected layer style
+      const s = String(L.style || 'circle').toLowerCase();
+      const showIds = new Set();
+
+      if (s === 'bars' || s === 'mirror') {
+        ['layer-decay','layer-thickness','layer-radial-floor'].forEach(id => showIds.add(id));
+      } else if (s === 'wave') {
+        ['layer-thickness','layer-wave-scale'].forEach(id => showIds.add(id));
+      } else if (s === 'ring') {
+        ['layer-rot','layer-thickness','layer-wave-scale','layer-edit-segments'].forEach(id => showIds.add(id));
+      } else if (s === 'radial') {
+        ['layer-rot','layer-decay','layer-thickness','layer-radial-floor','layer-edit-segments'].forEach(id => showIds.add(id));
+      } else if (s === 'particles') {
+        ['layer-thickness','layer-edit-segments'].forEach(id => showIds.add(id));
+      } else if (s === 'circle') {
+        ['layer-rot','layer-decay','layer-thickness','layer-ring-floor','layer-spike-scale','layer-edit-segments'].forEach(id => showIds.add(id));
+      } else if (s === 'image') {
+        // image fields already shown above; hide most tuning sliders
+        ['layer-edit-blend','layer-edit-alpha'].forEach(id => showIds.add(id));
+      } else if (s === 'background') {
+        // background: just colors, blend, alpha; tuning sliders hidden
+        ['layer-edit-blend','layer-edit-alpha'].forEach(id => showIds.add(id));
+      }
+
+      const ALL = [
+        'layer-rot','layer-decay','layer-thickness','layer-ring-floor','layer-radial-floor',
+        'layer-spike-scale','layer-wave-scale','layer-edit-segments','layer-edit-blend','layer-edit-alpha'
+      ];
+      ALL.forEach(id => setShow(id, showIds.has(id)));
     } catch (_) {}
   }
 
