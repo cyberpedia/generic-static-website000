@@ -4,6 +4,44 @@ html, body {
   padding: 0;
 }
 
+/* Material theme tokens */
+:root {
+  --md-bg: #000;
+  --md-text: #e6e6e9;
+  --md-surface: #0d0f14;
+  --md-panel: #12151d;
+  --md-panel-border: #1c2236;
+  --md-card: #1a1f29;
+  --md-card-border: #242b3a;
+  --md-accent: #2e7be7;
+  --md-secondary: #3a414f;
+  --md-success: #1fb855;
+  --md-danger: #c43d3d;
+  --md-input-bg: #0f1322;
+  --md-input-border: #3a4155;
+  --md-label: #c9d7ff;
+  --md-shadow: rgba(0,0,0,0.45);
+}
+
+/* Light theme overrides */
+body.light {
+  --md-bg: #f7f7f8;
+  --md-text: #1a1c22;
+  --md-surface: #ffffff;
+  --md-panel: #f9fbff;
+  --md-panel-border: #d9e1f2;
+  --md-card: #ffffff;
+  --md-card-border: #dce3ef;
+  --md-accent: #2e7be7;
+  --md-secondary: #e7ecf6;
+  --md-success: #1fb855;
+  --md-danger: #c43d3d;
+  --md-input-bg: #ffffff;
+  --md-input-border: #c9d7ea;
+  --md-label: #1a1c22;
+  --md-shadow: rgba(0,0,0,0.12);
+}
+
 /* Global box-sizing for consistent widths */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -18,8 +56,8 @@ body {
   height: 100vh;
   font-family: system-ui, sans-serif;
   margin: 0;
-  background: #000; /* dark site background */
-  color: #e6e6e9;
+  background: var(--md-bg);
+  color: var(--md-text);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -91,10 +129,10 @@ body.light .viz-mode select {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: #0d0f14;
+  background: var(--md-surface);
   color: #fff;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #1c2236;
+  border-bottom: 1px solid var(--md-panel-border);
 }
 .md-appbar .appbar-row {
   display: grid;
@@ -170,8 +208,8 @@ footer {
   bottom: 0;
   left: 0; right: 0;
   z-index: 1000;
-  background: #0d0f14;
-  border-top: 1px solid #1c2236;
+  background: var(--md-surface);
+  border-top: 1px solid var(--md-panel-border);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: center;
@@ -184,14 +222,14 @@ footer {
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  background: #3a414f;
-  color: #e6e6e9;
+  background: var(--md-secondary);
+  color: var(--md-text);
   border: none;
   border-radius: 12px;
   cursor: pointer;
 }
 .icon-btn.primary {
-  background: #2e7be7;
+  background: var(--md-accent);
   color: #fff;
 }
 
@@ -204,10 +242,10 @@ footer {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #2e7be7;
+  background: var(--md-accent);
   color: #fff;
   border: none;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+  box-shadow: 0 10px 24px var(--md-shadow);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -222,10 +260,10 @@ footer {
   top: 0; right: 0;
   height: 100%;
   width: clamp(280px, 86vw, 420px);
-  background: #12151d;
-  color: #e6e6e9;
-  border-left: 1px solid #1c2236;
-  box-shadow: -24px 0 60px rgba(0,0,0,0.45);
+  background: var(--md-panel);
+  color: var(--md-text);
+  border-left: 1px solid var(--md-panel-border);
+  box-shadow: -24px 0 60px var(--md-shadow);
   transform: translateX(100%);
   transition: transform 220ms ease;
   z-index: 1100;
@@ -237,7 +275,7 @@ footer {
 .md-drawer.open { transform: translateX(0); }
 .md-drawer .drawer-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding-bottom: 8px; border-bottom: 1px solid #1c2236; margin-bottom: 10px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--md-panel-border); margin-bottom: 10px;
 }
 .md-drawer .drawer-head h3 { margin: 0; font-size: 1.1rem; color: #f2f5ff; }
 .md-scrim {
@@ -444,14 +482,15 @@ footer {
 
 /* Visualizer layout card wraps canvas + controls + tuning + EQ + logger */
 .viz-layout {
-  background: #12151d;
-  border: 1px solid #1c2236;
+  background: var(--md-panel);
+  border: 1px solid var(--md-panel-border);
   border-radius: 14px;
   padding: clamp(10px, 2.2vw, 18px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  box-shadow: 0 20px 60px var(--md-shadow);
   max-width: clamp(320px, 92vw, 900px);
   margin: 0 auto; /* center the panel */
   overflow-x: hidden; /* prevent any horizontal overflow */
+
 }
 .viz-title {
   font-size: clamp(1.6rem, 5.4vw, 2.6rem);
@@ -472,12 +511,14 @@ footer {
 
 /* Panel base */
 .panel {
-  background: #1a1f29;
-  border: 1px solid #242b3a;
+  background: var(--md-card);
+  border: 1px solid var(--md-card-border);
   border-radius: 14px;
   padding: clamp(10px, 2vw, 16px);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
-  margin-top: clamp(10px, 2vw, 16px);
+  box-shadow: 0 16px 40px var(--md-shadow);
+  margin-top: clamp(10px, 2vw, 16px_code);new
+</}
+);
 }
 .panel-head {
   display: flex;

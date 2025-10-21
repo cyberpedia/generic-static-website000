@@ -158,17 +158,31 @@ const App = (() => {
         state.analyserR.smoothingTimeConstant = smooth;
       }
     } catch (_) {}
+    // initialize layer stack with current style
+    try {
+      const initStyle = document.getElementById('viz-style').value;
+      state.viz.addLayer(initStyle, {
+        color1: document.getElementById('viz-color-1').value,
+        color2: document.getElementById('viz-color-2').value,
+        rotation: Number(document.getElementById('viz-rot').value || 0.6),
+        thickness: Number(document.getElementById('viz-thickness').value || 1),
+        ringFloor: Number(document.getElementById('viz-ring-floor').value || 0.16),
+        radialFloor: Number(document.getElementById('viz-radial-floor').value || 0.16),
+        spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),
+        waveScale: Number(document.getElementById('viz-wave-scale').value || 1),
+        segments: Number(document.getElementById('viz-segments').value || 4)
+      });
+      state.viz.selectLayer(0);
+      renderLayersUI();
+    } catch (_) {}
+
     state.viz.start();
 
-    // initial canvas reflow
     reflowCanvas();
 
-    // show only relevant tuning controls for current style
     try { updateTuningVisibility(document.getElementById('viz-style').value); } catch (_) {}
-    // populate style templates for current style
     try { populateStyleTemplates(document.getElementById('viz-style').value); } catch (_) {}
 
-    // listen for viewport/orientation changes globally
     window.addEventListener('resize', reflowCanvas);
     try {
       if (window.screen && window.screen.orientation) {
@@ -176,7 +190,6 @@ const App = (() => {
       }
     } catch (_) {}
 
-    // apply initial volume
     setVolume(Number(document.getElementById('volume').value || 0.9));
   }
 
@@ -441,7 +454,7 @@ ${item.name}`);
       const rec = !!state.recorder;
       const track = state.currentTrack ? (state.currentTrack.name || state.currentTrack.path) : 'N/A';
       const layersCount = (document.getElementById('layers-list')?.children?.length) || 0;
-      const selected = 'none';
+      const selected = (state.viz && state.viz.sel >= 0) ? String(state.viz.sel) : 'none';
       const beatLevel = state.viz ? Number(state.viz.beatLevel || 0).toFixed(2) : '0.00';
       const bpm = state.viz && state.viz.bpmEnabled ? (state.viz.bpm || '—') : '—';
 
@@ -1093,6 +1106,29 @@ ${item.name}`);
 
     document.getElementById('record').addEventListener('click', () => { logAction('record.toggle'); toggleRecording(); });
 
+    // Layers: add new layer, render list and bind actions
+    const layerAddBtn = document.getElementById('layer-add');
+    if (layerAddBtn) {
+      layerAddBtn.addEventListener('click', () => {
+        ensureAudioContext();
+        const style = document.getElementById('viz-style').value || 'circle';
+        const idx = state.viz.addLayer(style, {
+          color1: document.getElementById('viz-color-1').value,
+          color2: document.getElementById('viz-color-2').value,
+          rotation: Number(document.getElementById('viz-rot').value || 0.6),
+          thickness: Number(document.getElementById('viz-thickness').value || 1),
+          ringFloor: Number(document.getElementById('viz-ring-floor').value || 0.16),
+          radialFloor: Number(document.getElementById('viz-radial-floor').value || 0.16),
+          spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),
+          waveScale: Number(document.getElementById('viz-wave-scale').value || 1),
+          segments: Number(document.getElementById('viz-segments').value || 4)
+        });
+        state.viz.selectLayer(idx);
+        renderLayersUI();
+        notify('Layer added', 'success', 1500);
+      });
+    }
+
     // Snapshot
     const snapBtn = document.getElementById('snapshot');
     if (snapBtn) {
@@ -1338,7 +1374,92 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     }
   }
 
-  return { init, playTrack, state, getCurrentTrack, loadLibrary };
+  // Render Layers UI from visualizer stack
+  function renderLayersUI() {
+    const ul = document.getElementById('layers-list');
+    if (!ul || !state.viz) return;
+    ul.innerHTML = '';
+    const layers = state.viz.getLayers();
+    layers.forEach((L, idx) => {
+      const li = document.createElement('li');
+      li.dataset.index = String(idx);
+
+      const handle = document.createElement('span');
+      handle.className = 'handle';
+      handle.textContent = '⋮⋮';
+
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = (L.style || 'Layer');
+
+      const actions = document.createElement('span');
+      actions.className = 'actions';
+
+      const eye = document.createElement('button');
+      eye.className = 'eye btn secondary';
+      eye.title = 'Visible';
+      eye.textContent = L.visible === false ? '🙈' : '👁';
+      eye.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.viz.setLayerVisible(idx, L.visible === false ? true : false);
+        renderLayersUI();
+      });
+
+      const gear = document.createElement('button');
+      gear.className = 'gear btn secondary';
+      gear.title = 'Settings';
+      gear.textContent = '⚙️';
+      gear.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.viz.selectLayer(idx);
+        // open drawer and set style select to this layer's style
+        const sel = document.getElementById('viz-style');
+        if (sel) { sel.value = L.style || sel.value; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+        const fab = document.getElementById('fab-customize');
+        const drawer = document.getElementById('viz-drawer');
+        const scrim = document.getElementById('viz-scrim');
+        if (drawer) {
+          drawer.classList.add('open');
+          if (scrim) scrim.classList.add('show');
+        } else if (fab) {
+          fab.click();
+        }
+      });
+
+      const trash = document.createElement('button');
+      trash.className = 'trash btn danger';
+      trash.title = 'Delete';
+      trash.textContent = '🗑';
+      trash.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!window.confirm('Delete layer?')) return;
+        state.viz.removeLayer(idx);
+        renderLayersUI();
+      });
+
+      actions.appendChild(eye);
+      actions.appendChild(gear);
+      actions.appendChild(trash);
+
+      li.appendChild(handle);
+      li.appendChild(name);
+      li.appendChild(actions);
+
+      li.addEventListener('click', () => {
+        state.viz.selectLayer(idx);
+        renderLayersUI();
+      });
+
+      // Highlight selected
+      if (state.viz.sel === idx) {
+        li.style.borderColor = '#2e7be7';
+      }
+
+      ul.appendChild(li);
+    });
+  }
+
+  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -10,21 +10,21 @@
       this.color1 = '#19d3ae';
       this.color2 = '#1e90ff';
       this.running = false;
-      // visual options
+      // visual options (global)
       this.glow = true;
       this.trail = true;
       this.showArt = true;
       this.glowStrength = 12;
       this.trailAlpha = 0.08;
 
-      // tunable params
-      this.thickness = 1.0;   // global line thickness multiplier
-      this.spikeScale = 1.0;  // circle spike length multiplier
-      this.waveScale = 1.0;   // ring-wave amplitude multiplier
-      this.ringFloor = 0.16;  // amplitude floor for circle visualization
-      this.radialFloor = 0.16; // amplitude floor for radial bars
-      this.beatSense = 1.0;   // beat sensitivity multiplier
-      this.beatBoost = 1.0;   // beat pulse/particle boosting
+      // tunable params (act as defaults when layers not used)
+      this.thickness = 1.0;
+      this.spikeScale = 1.0;
+      this.waveScale = 1.0;
+      this.ringFloor = 0.16;
+      this.radialFloor = 0.16;
+      this.beatSense = 1.0;
+      this.beatBoost = 1.0;
 
       // motion and peak handling
       this.angle = 0;
@@ -34,8 +34,7 @@
       this.peaks = new Float32Array(this.analyser.frequencyBinCount);
       this.ampGain = 1;
 
-      // coverage multiplier around the circle (repeat pattern evenly around 360°)
-      // Using 4 segments by default so all sides pulse uniformly to the same spectrum pattern.
+      // segments replication (default 4)
       this.segments = 4;
 
       // dynamic fast mode flag (auto when heavy styles/settings)
@@ -59,7 +58,7 @@
       this.lowGain = 1.0;
       this.midGain = 1.0;
       this.highGain = 1.0;
-      // emphasis mode: 'flat' (no weighting) | 'weighted'
+      // emphasis mode: 'flat' | 'weighted'
       this.emphasisMode = 'flat';
 
       // beat smoothing
@@ -74,7 +73,7 @@
       this.bpmEnabled = false;
       this.bpm = null;
 
-      // Analyzer tuning for better dynamic range
+      // Analyzer tuning
       this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.8;
       this.analyser.minDecibels = -90;
@@ -84,12 +83,21 @@
       this.freqFloat = new Float32Array(this.analyser.frequencyBinCount);
       this.timeData = new Uint8Array(this.analyser.frequencyBinCount);
 
+      // Layer stack
+      this.layers = [];
+      this.sel = -1;
+
       this.resize();
       window.addEventListener('resize', () => this.resize());
     }
 
     setStyle(style) {
-      this.style = style;
+      const s = String(style || this.style);
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].style = s;
+      } else {
+        this.style = s;
+      }
       if (this.stylePresetsOn) this.applyStylePresets();
     }
 
@@ -131,8 +139,14 @@
     }
 
     setColors(c1, c2) {
-      this.color1 = c1;
-      this.color2 = c2;
+      if (this.layers.length && this.sel >= 0) {
+        const L = this.layers[this.sel];
+        L.color1 = c1;
+        L.color2 = c2;
+      } else {
+        this.color1 = c1;
+        this.color2 = c2;
+      }
     }
 
     setGlow(on) {
@@ -148,42 +162,86 @@
     }
 
     setRotationSpeed(radPerSec) {
-      this.rotation = Number(radPerSec) || this.rotation;
+      const v = Number(radPerSec) || this.rotation;
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].rotation = v;
+      } else {
+        this.rotation = v;
+      }
     }
 
     setGlowStrength(v) {
-      this.glowStrength = Math.max(0, Number(v) || 0);
+      const val = Math.max(0, Number(v) || 0);
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].glowStrength = val;
+      } else {
+        this.glowStrength = val;
+      }
     }
 
     setTrailAlpha(v) {
-      this.trailAlpha = Math.max(0, Math.min(0.5, Number(v) || 0));
-    }
+      const val = Math.max(0, Math.min(0.5, Number(v) || 0));
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].trailAlpha = val;
+      } else {
+        this.trailAlpha = val;
+      }
+ 
 
     setDecay(v) {
       const d = Number(v);
-      if (d > 0 && d < 1) this.decay = d;
+      if (!(d > 0 && d < 1)) return;
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].decay = d;
+      } else {
+        this.decay = d;
+      }
     }
 
     setThickness(v) {
-      this.thickness = Math.max(0.5, Math.min(4, Number(v) || 1));
+      const val = Math.max(0.5, Math.min(4, Number(v) || 1));
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].thickness = val;
+      } else {
+        this.thickness = val;
+      }
     }
 
     setSpikeScale(v) {
-      this.spikeScale = Math.max(0.5, Math.min(2.5, Number(v) || 1));
+      const val = Math.max(0.5, Math.min(2.5, Number(v) || 1));
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].spikeScale = val;
+      } else {
+        this.spikeScale = val;
+      }
     }
 
     setWaveScale(v) {
-      this.waveScale = Math.max(0.5, Math.min(2.5, Number(v) || 1));
+      const val = Math.max(0.5, Math.min(2.5, Number(v) || 1));
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].waveScale = val;
+      } else {
+        this.waveScale = val;
+      }
     }
 
     setRingFloor(v) {
-      this.ringFloor = Math.max(0, Math.min(0.4, Number(v) || 0.16));
+      const val = Math.max(0, Math.min(0.4, Number(v) || 0.16));
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].ringFloor = val;
+      } else {
+        this.ringFloor = val;
+      }
     }
 
     setRadialFloor(v) {
-      this.radialFloor = Math.max(0, Math.min(0.4, Number(v) || 0.16));
-    }
-
+      const val = Math.max(0, Math.min(0.4, Number(v) || 0.16));
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].radialFloor = val;
+      } else {
+        this.radialFloor = val;
+      }
+ 
     setBeatSensitivity(v) {
       this.beatSense = Math.max(0.2, Math.min(2.5, Number(v) || 1));
     }
@@ -249,6 +307,52 @@
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
+    // --- Layer stack API ----------------------------------------------------
+
+    addLayer(type = 'circle', params = {}) {
+      const L = {
+        style: String(type || 'circle'),
+        visible: true,
+        color1: params.color1 ?? this.color1,
+        color2: params.color2 ?? this.color2,
+        thickness: params.thickness ?? this.thickness,
+        ringFloor: params.ringFloor ?? this.ringFloor,
+        radialFloor: params.radialFloor ?? this.radialFloor,
+        spikeScale: params.spikeScale ?? this.spikeScale,
+        waveScale: params.waveScale ?? this.waveScale,
+        segments: params.segments ?? this.segments,
+        rotation: params.rotation ?? this.rotation
+      };
+      this.layers.push(L);
+      if (this.sel < 0) this.sel = 0;
+      return this.layers.length - 1;
+    }
+
+    removeLayer(index) {
+      const i = Number(index);
+      if (i < 0 || i >= this.layers.length) return false;
+      this.layers.splice(i, 1);
+      if (this.sel >= this.layers.length) this.sel = this.layers.length - 1;
+      return true;
+    }
+
+    setLayerVisible(index, on) {
+      const i = Number(index);
+      if (i < 0 || i >= this.layers.length) return;
+      this.layers[i].visible = !!on;
+    }
+
+    selectLayer(index) {
+      const i = Number(index);
+      if (i < 0 || i >= this.layers.length) { this.sel = -1; return false; }
+      this.sel = i;
+      return true;
+    }
+
+    getLayers() {
+      return this.layers.slice();
+    }
+
     start() {
       if (this.running) return;
       this.running = true;
@@ -286,8 +390,12 @@
     }
 
     setSegments(n) {
-      const v = Number(n) || this.segments;
-      this.segments = Math.max(1, Math.min(8, v));
+      const v = Math.max(1, Math.min(8, Number(n) || this.segments));
+      if (this.layers.length && this.sel >= 0) {
+        this.layers[this.sel].segments = v;
+      } else {
+        this.segments = v;
+      }
     }
 
     getSpectrum(bins, gamma = 2.0, floorOverride = null) {
@@ -545,21 +653,21 @@
       const w = canvas.width / (window.devicePixelRatio || 1);
       const h = canvas.height / (window.devicePixelRatio || 1);
 
-      // Guard against zero-size canvas (mobile layout changes)
       if (w < 2 || h < 2) {
         this.resize();
         return;
       }
 
-      // trail effect for select styles; circle keeps a crisp ring
-      const trailStyles = new Set(['radial', 'ring', 'particles', 'bars', 'mirror', 'wave']);
-      // advance rotation angle once per frame for all styles
       const now = performance.now();
       const dt = this.lastTS ? (now - this.lastTS) / 1000 : 0;
       this.lastTS = now;
+      // global rotation used when layer doesn't override
       this.angle += this.rotation * dt;
 
-      if (this.trail && trailStyles.has(this.style)) {
+      // decide trail based on current (selected or default) style
+      const currentStyle = (this.layers.length && this.sel >= 0) ? (this.layers[this.sel]?.style || this.style) : this.style;
+      const trailStyles = new Set(['radial', 'ring', 'particles', 'bars', 'mirror', 'wave']);
+      if (this.trail && trailStyles.has(currentStyle)) {
         const alpha = this.fast ? Math.min(this.trailAlpha, 0.04) : this.trailAlpha;
         ctx.fillStyle = `rgba(15,19,34,${alpha})`;
         ctx.fillRect(0, 0, w, h);
@@ -567,38 +675,60 @@
         ctx.clearRect(0, 0, w, h);
       }
 
-      // update beat envelope (threshold/decay/hold/BPM)
       try { this.updateBeat(); } catch (_) {}
 
-      // auto fast-mode heuristic for heavy circular styles
-      const heavy = (this.style === 'circle' || this.style === 'radial');
-      if (heavy) {
-        const estOps = (this.segments | 0) * 180; // approximate strokes per frame
-        this.fast = estOps > 360;                 // 4*180 triggers fast mode on many mobiles
-      } else {
-        this.fast = false;
+      // auto fast-mode heuristic (estimate ops across layers)
+      let estOps = 0;
+      const layersList = this.layers.length ? this.layers : [{
+        style: this.style, color1: this.color1, color2: this.color2,
+        thickness: this.thickness, ringFloor: this.ringFloor, radialFloor: this.radialFloor,
+        spikeScale: this.spikeScale, waveScale: this.waveScale, segments: this.segments, rotation: this.rotation, visible: true
+      }];
+      for (const L of layersList) {
+        if (L.visible === false) continue;
+        if (L.style === 'circle' || L.style === 'radial' || L.style === 'ring') {
+          estOps += (L.segments || this.segments || 1) * 180;
+        } else {
+          estOps += 120;
+        }
       }
+      this.fast = estOps > 360;
 
-      // center art (draw under visualization)
       this.drawCenterArt(w, h);
 
-      // glow (reduced blur in fast mode)
-      ctx.shadowColor = this.glow ? this.color2 : 'transparent';
+      // glow (use current or default color2)
+      ctx.shadowColor = this.glow ? (this.color2 || '#fff') : 'transparent';
       ctx.shadowBlur = this.glow ? (this.fast ? Math.min(this.glowStrength, 6) : this.glowStrength) : 0;
 
-      const grad = API.gradient(ctx, this.color1, this.color2, w, h);
-      ctx.fillStyle = grad;
-      ctx.strokeStyle = grad;
+      for (const L of layersList) {
+        if (L.visible === false) continue;
+        const c1 = L.color1 || this.color1;
+        const c2 = L.color2 || this.color2;
 
-      if (this.style === 'bars') this.drawBars(w, h);
-      else if (this.style === 'wave') this.drawWave(w, h);
-      else if (this.style === 'radial') this.drawRadialBars(w, h);
-      else if (this.style === 'ring') this.drawRingWave(w, h);
-      else if (this.style === 'mirror') this.drawMirrorBars(w, h);
-      else if (this.style === 'particles') this.drawParticles(w, h);
-      else this.drawCircle(w, h);
+        // per-layer glow adjustments
+        if (this.glow) {
+          const g = (L.glowStrength ?? this.glowStrength);
+          ctx.shadowColor = c2;
+          ctx.shadowBlur = this.fast ? Math.min(g, 6) : g;
+        } else {
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+        }
 
-      // BPM overlay
+        const grad = API.gradient(ctx, c1, c2, w, h);
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = grad;
+
+        const style = L.style || this.style;
+        if (style === 'bars') this.drawBars(w, h, L);
+        else if (style === 'wave') this.drawWave(w, h, L);
+        else if (style === 'radial') this.drawRadialBars(w, h, L);
+        else if (style === 'ring') this.drawRingWave(w, h, L);
+        else if (style === 'mirror') this.drawMirrorBars(w, h, L);
+        else if (style === 'particles') this.drawParticles(w, h, L);
+        else this.drawCircle(w, h, L);
+      }
+
       if (this.bpmEnabled && this.bpm) {
         ctx.save();
         ctx.shadowBlur = 0;
@@ -625,65 +755,69 @@
       }
     }
 
-    drawWave(w, h) {
+    drawWave(w, h, L) {
+      const waveScale = (L?.waveScale ?? this.waveScale);
+      const thickness = (L?.thickness ?? this.thickness);
       const bins = this.bins(256);
       const wave = this.getTimeWave(bins);
       this.ctx.beginPath();
       for (let i = 0; i < bins; i++) {
         const x = (i / (bins - 1)) * w;
-        const v = (wave[i] - 0.08) / 0.92; // re-center around 0
-        const y = h / 2 + v * (h / 2) * 0.9 * this.waveScale;
+        const v = (wave[i] - 0.08) / 0.92;
+        const y = h / 2 + v * (h / 2) * 0.9 * waveScale;
         if (i === 0) this.ctx.moveTo(x, y);
         else this.ctx.lineTo(x, y);
       }
-      this.ctx.lineWidth = 2.0 * this.thickness;
+      this.ctx.lineWidth = 2.0 * thickness;
       this.ctx.stroke();
     }
 
-    drawRingWave(w, h) {
-      // smoothed time-domain ring wave, optionally replicated around the circle via segments
+    drawRingWave(w, h, L) {
+      const waveScale = (L?.waveScale ?? this.waveScale);
+      const thickness = (L?.thickness ?? this.thickness);
+      const segments = (L?.segments ?? this.segments);
+      const rotation = (L?.rotation ?? this.rotation);
+
       const bins = this.bins(240);
       const wave = this.getTimeWave(bins);
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
-      const scale = Math.min(h / 5, r * 0.75) * this.waveScale;
+      const scale = Math.min(h / 5, r * 0.75) * waveScale;
 
       const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
-      const segs = Math.max(1, this.segments | 0);
+      const segs = Math.max(1, segments | 0);
 
       for (let s = 0; s < segs; s++) {
         this.ctx.beginPath();
         for (let i = 0; i < bins; i++) {
           const tIdx = (i + s * bins);
-          const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle;
-          const len = r + wave[i] * scale + pulse * (h / 18); // subtle beat-driven expansion
+          const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle + rotation * 0;
+          const len = r + wave[i] * scale + pulse * (h / 18);
           const x = cx + Math.cos(ang) * len;
           const y = cy + Math.sin(ang) * len;
           if (i === 0) this.ctx.moveTo(x, y);
           else this.ctx.lineTo(x, y);
         }
         this.ctx.closePath();
-        this.ctx.lineWidth = 2.6 * this.thickness;
+        this.ctx.lineWidth = 2.6 * thickness;
         this.ctx.stroke();
       }
     }
 
-    drawMirrorBars(w, h) {
-      // vertical bars mirrored top/bottom with smoothed spectrum
+    drawMirrorBars(w, h, L) {
+      const thickness = (L?.thickness ?? this.thickness);
+      const floor = (L?.radialFloor ?? this.radialFloor);
+      const c1 = L?.color1 || this.color1;
+      const c2 = L?.color2 || this.color2;
       const bins = this.bins(100);
-      const { peaks } = this.getSpectrum(bins, 1.0, this.radialFloor);
+      const { peaks } = this.getSpectrum(bins, 1.0, floor);
       const bw = w / bins;
-      const width = Math.max(2, (bw - 4) * (0.75 + 0.25 * this.thickness));
+      const width = Math.max(2, (bw - 4) * (0.75 + 0.25 * thickness));
       const gap = Math.max(2, (bw - width));
 
       this.ctx.save();
       this.ctx.lineCap = 'round';
 
-      for (let i = 0; i < bins; i++) {
-        const v = peaks[i];
-        const bh = v * (h / 2);
-        const x = i * bw + (gap / 2);
-
-        // gradient color along x
+      for (let i =     // gradient color along x
         const t = i / (bins - 1);
         this.ctx.fillStyle = lerpColor(this.color1, this.color2, t);
 
@@ -698,34 +832,37 @@
       this.ctx.restore();
     }
 
-    drawRadialBars(w, h) {
-      // frequency-domain radial bars using mono spectrum for full 360° uniform coverage
+    drawRadialBars(w, h, L) {
+      const thickness = (L?.thickness ?? this.thickness);
+      const floor = (L?.radialFloor ?? this.radialFloor);
+      const segments = (L?.segments ?? this.segments);
+      const c1 = L?.color1 || this.color1;
+      const c2 = L?.color2 || this.color2;
+
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 
       const bins = this.bins(180);
-      const { peaks } = this.getSpectrum(bins, 1.0, this.radialFloor);
+      const { peaks } = this.getSpectrum(bins, 1.0, floor);
 
-      // Beat ring using global beat level
       const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
       const beatRadius = r + pulse * (h / 16);
       this.ctx.save();
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, beatRadius, 0, Math.PI * 2);
       this.ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-      this.ctx.lineWidth = (2.5 * this.thickness) * (1 + pulse * this.pulseWidth * 0.8);
+      this.ctx.lineWidth = (2.5 * thickness) * (1 + pulse * this.pulseWidth * 0.8);
       this.ctx.stroke();
       this.ctx.restore();
 
       this.ctx.save();
       this.ctx.lineCap = 'round';
 
-      const segs = Math.max(1, (this.fast ? Math.max(1, Math.floor(this.segments / 2)) : this.segments) | 0);
+      const segs = Math.max(1, (this.fast ? Math.max(1, Math.floor(segments / 2)) : segments) | 0);
       for (let i = 0; i < bins; i++) {
         const v = peaks[i];
-        // preselect color and width based on mode
         const colorT = i / (bins - 1);
-        const strokeClr = this.fast ? this.color2 : lerpColor(this.color1, this.color2, colorT);
-        const lw = (this.fast ? (1.6 + v * 2.6) : (2.2 + v * 3.6)) * this.thickness;
+        const strokeClr = this.fast ? c2 : lerpColor(c1, c2, colorT);
+        const lw = (this.fast ? (1.6 + v * 2.6) : (2.2 + v * 3.6)) * thickness;
         for (let s = 0; s < segs; s++) {
           const tIdx = (i + s * bins);
           const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle;
@@ -744,9 +881,8 @@
           this.ctx.stroke();
 
           if (!this.fast) {
-            // cap dot only in normal mode (expensive to draw many arcs on mobile)
             this.ctx.beginPath();
-            this.ctx.arc(x1, y1, (2.0 + v * 2.6) * this.thickness, 0, Math.PI * 2);
+            this.ctx.arc(x1, y1, (2.0 + v * 2.6) * thickness, 0, Math.PI * 2);
             this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
             this.ctx.fill();
           }
@@ -755,14 +891,13 @@
 
       this.ctx.restore();
 
-      // progress arc overlay
       if (this.progress > 0) {
         const start = -Math.PI / 2;
         const end = start + this.progress * Math.PI * 2;
         this.ctx.save();
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, r + 1.5, start, end);
-        this.ctx.lineWidth = 3.4 * this.thickness;
+        this.ctx.lineWidth = 3.4 * thickness;
         this.ctx.strokeStyle = 'rgba(255,255,255,0.35)';
         this.ctx.lineCap = 'round';
         this.ctx.stroke();
@@ -770,27 +905,31 @@
       }
     }
 
-    drawCircle(w, h) {
-      // base ring + uniform amplitude spikes around full 360° using mono spectrum
+    drawCircle(w, h, L) {
+      const thickness = (L?.thickness ?? this.thickness);
+      const ringFloor = (L?.ringFloor ?? this.ringFloor);
+      const spikeScaleParam = (L?.spikeScale ?? this.spikeScale);
+      const segments = (L?.segments ?? this.segments);
+      const c2 = L?.color2 || this.color2;
+
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
 
-      // draw a continuous base ring (no dots) for perfect circle
       this.ctx.save();
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      this.ctx.lineWidth = 3.2 * this.thickness;
+      this.ctx.lineWidth = 3.2 * thickness;
       this.ctx.stroke();
       this.ctx.restore();
 
       const bins = this.bins(180);
-      const { peaks } = this.getSpectrum(bins, 1.0, this.ringFloor);
-      const spikeScale = Math.min(h / 4, r * 0.65) * this.spikeScale;
+      const { peaks } = this.getSpectrum(bins, 1.0, ringFloor);
+      const spikeScale = Math.min(h / 4, r * 0.65) * spikeScaleParam;
 
       const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
-      const segs = Math.max(1, (this.fast ? Math.max(1, Math.floor(this.segments / 2)) : this.segments) | 0);
+      const segs = Math.max(1, (this.fast ? Math.max(1, Math.floor(segments / 2)) : segments) | 0);
       for (let i = 0; i < bins; i++) {
         const v = peaks[i];
-        const lw = (this.fast ? (1.4 + v * 1.8) : (1.8 + v * 2.0)) * this.thickness;
+        const lw = (this.fast ? (1.4 + v * 1.8) : (1.8 + v * 2.0)) * thickness;
         for (let s = 0; s < segs; s++) {
           const tIdx = (i + s * bins);
           const ang = (tIdx / (bins * segs)) * Math.PI * 2 + this.angle;
@@ -801,8 +940,7 @@
           const y1 = cy + Math.sin(ang) * len;
 
           if (this.fast) {
-            // single color for speed
-            this.ctx.strokeStyle = this.color2;
+            this.ctx.strokeStyle = c2;
           }
 
           this.ctx.beginPath();
@@ -813,14 +951,13 @@
         }
       }
 
-      // progress arc overlay (12 o'clock start, clockwise)
       if (this.progress > 0) {
         const start = -Math.PI / 2;
         const end = start + this.progress * Math.PI * 2;
         this.ctx.save();
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, r + 1.5, start, end);
-        this.ctx.lineWidth = 3.4 * this.thickness;
+        this.ctx.lineWidth = 3.4 * thickness;
         this.ctx.strokeStyle = 'rgba(255,255,255,0.35)';
         this.ctx.lineCap = 'round';
         this.ctx.stroke();
@@ -828,13 +965,13 @@
       }
     }
 
-    drawParticles(w, h) {
-      // particle orbit around ring with beat-driven spawning using global beat level
+    drawParticles(w, h, L) {
+      const thickness = (L?.thickness ?? this.thickness);
+      const segments = (L?.segments ?? this.segments);
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 3;
       const pulse = Math.max(0, this.beatLevel) * this.beatBoost;
-      const segs = Math.max(1, this.segments | 0);
+      const segs = Math.max(1, segments | 0);
 
-      // distribute spawns across segments for uniform coverage
       const totalSpawn = Math.min(8, Math.floor(pulse * 12));
       const spawnPerSeg = Math.max(1, Math.floor(totalSpawn / segs));
 
@@ -853,9 +990,8 @@
         }
       }
 
-      // update and draw
       const next = [];
-      const sizeScale = 1 + 0.4 * (this.thickness - 1);
+      const sizeScale = 1 + 0.4 * (thickness - 1);
       this.ctx.save();
       for (const p of this.particles) {
         p.theta += p.speed * 0.02;
