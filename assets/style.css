@@ -194,6 +194,61 @@ footer {
   background: #2e7be7;
   color: #fff;
 }
+
+/* Floating Action Button (FAB) */
+.md-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 88px; /* above bottom nav */
+  z-index: 1100;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #2e7be7;
+  color: #fff;
+  border: none;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+.md-fab:hover { background: #2a73d8; }
+
+/* Drawer for visualizer customization */
+.md-drawer {
+  position: fixed;
+  top: 0; right: 0;
+  height: 100%;
+  width: clamp(280px, 86vw, 420px);
+  background: #12151d;
+  color: #e6e6e9;
+  border-left: 1px solid #1c2236;
+  box-shadow: -24px 0 60px rgba(0,0,0,0.45);
+  transform: translateX(100%);
+  transition: transform 220ms ease;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  overflow-y: auto;
+}
+.md-drawer.open { transform: translateX(0); }
+.md-drawer .drawer-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 8px; border-bottom: 1px solid #1c2236; margin-bottom: 10px;
+}
+.md-drawer .drawer-head h3 { margin: 0; font-size: 1.1rem; color: #f2f5ff; }
+.md-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1099;
+  display: none;
+}
+.md-scrim.show { display: block; }
+
 @media (max-width: 600px) {
   footer {
     padding: 0.9rem 0;

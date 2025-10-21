@@ -6,70 +6,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Avee-like Media Player (PHP/XAMPP)</title>
   <link rel="stylesheet" href="assets/style.css?v=20251020-18">
-  <style>
-    /* Floating Action Button (FAB) */
-    .md-fab {
-      position: fixed;
-      right: 16px;
-      bottom: 88px; /* above bottom nav */
-      z-index: 1100;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: #2e7be7;
-      color: #fff;
-      border: none;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.35);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-    }
-    .md-fab:hover { background: #2a73d8; }
-
-    /* Drawer for visualizer customization */
-    .md-drawer {
-      position: fixed;
-      top: 0; right: 0;
-      height: 100%;
-      width: clamp(280px, 86vw, 420px);
-      background: #12151d;
-      color: #e6e6e9;
-      border-left: 1px solid #1c2236;
-      box-shadow: -24px 0 60px rgba(0,0,0,0.45);
-      transform: translateX(100%);
-      transition: transform 220ms ease;
-      z-index: 1100;
-      display: flex;
-      flex-direction: column;
-      padding: 12px;
-      overflow-y: auto;
-    }
-    .md-drawer.open { transform: translateX(0); }
-    .md-drawer .drawer-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding-bottom: 8px; border-bottom: 1px solid #1c2236; margin-bottom: 10px;
-    }
-    .md-drawer .drawer-head h3 { margin: 0; font-size: 1.1rem; color: #f2f5ff; }
-    .md-scrim {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      z-index: 1099;
-      display: none;
-    }
-    .md-scrim.show { display: block; }
-  </style>
+  
   <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
 <body>
   <header class="md-appbar" role="banner">
-   < div class="appbar-row">
-     < button id="top-menu" class="icon-btn" aria-label="Menu" title="Menu"</>☰button>
-     < div class="appbar-title">Avee-like Media Play</erdiv>
-     < div class="appbar-actions">
-       < input type="text" id="top-search" class="
+    <div class="appbar-row">
+      <button id="top-menu" class="icon-btn" aria-label="Menu" title="Menu">☰</button>
+      <div class="appbar-title">Avee-like Media Player</div>
+      <div class="appbar-actions">
+        <input type="text" id="top-search" class="appbar-input" placeholder="Search…" aria-label="Search" />
+        <label class="upload-btn appbar-upload" title="Upload audio files">
+          Upload
+          <input type="file" id="top-upload-input" accept="audio/*" multiple />
+        </label>
+        <button id="top-rescan" class="btn secondary" title="Rescan music folder" aria-label="Rescan">Rescan</button>
+        <div class="import-inline" aria-label="Import from URL">
+          <input type="url" id="top-import-url" class="appbar-input" placeholder="Import URL" aria-label="Import URL"/>
+          <button id="top-import-btn" class="btn secondary" title="Import from URL" aria-label="Import">Import</button>
+        </div>
+      </div>
+    </div>
+  </header>
   <main>
     <div id="app" class="md-container md-grid app-grid">
       <!-- Library Sidebar -->
@@ -389,6 +347,15 @@
         if (scrim) scrim.classList.remove('show');
       }
 
-      if (fab) fabcript>
+      if (fab) fab.addEventListener('click', openDrawer);
+      if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+      if (scrim) scrim.addEventListener('click', closeDrawer);
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDrawer();
+      });
+    })();
+  </script>
+
+  <script src="assets/js/app.js?v=20251020-17"></script>
 </body>
 </html>
