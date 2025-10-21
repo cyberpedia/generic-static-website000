@@ -377,7 +377,12 @@
       const loop = (ts) => {
         if (!this.running) return;
         try {
-          if (!last || (ts - last  console.error('viz.draw error', err);
+          if (!last || (ts - last) >= this.frameIntervalMs) {
+            this.draw();
+            last = ts;
+          }
+        } catch (err) {
+          console.error('viz.draw error', err);
           try { if (window.BUG) BUG.error('viz.draw', err); } catch (_) {}
         }
         requestAnimationFrame(loop);
