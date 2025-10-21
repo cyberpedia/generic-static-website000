@@ -310,14 +310,7 @@
             </div>
           </div>
 
-          <!-- Layers panel -->
-          <div class="panel layers-panel">
-            <div class="panel-head">
-              <h3>Layers</h3>
-              <button id="layer-add" class="btn primary">+</button>
-            </div>
-            <ul id="layers-list" class="layers"></ul>
-          </div>
+          <!-- Layers panel removed; use floating Layers drawer (☷) -->
 
           <!-- Project actions -->
           <div class="panel actions-panel">
@@ -381,6 +374,63 @@
       <button id="sd-open-layers" class="icon-btn" title="Layers">☷</button>
     </div>
   </div>
+
+  <!-- Floating Tools: search/upload/import/rescan -->
+  <div id="float-tools" class="md-float-tools" aria-label="Library tools">
+    <input type="text" id="float-search" placeholder="Search…" />
+    <button id="float-rescan" class="btn secondary">Rescan</button>
+    <label class="upload-btn" title="Upload audio files">
+      Upload
+      <input type="file" id="float-upload-input" accept="audio/*" multiple />
+    </label>
+    <input type="url" id="float-import-url" placeholder="Import URL" />
+    <button id="float-import-btn" class="btn secondary">Import</button>
+  </div>
+
+  <!-- Upload progress overlay -->
+  <div id="upload-overlay" class="md-overlay" aria-hidden="true">
+    <div class="box">
+      <div class="spinner"></div>
+      <div class="text" id="upload-status">Uploading…</div>
+    </div>
+  </div>
+
+  <!-- Playlist Create Drawer -->
+  <div id="playlist-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="playlist-drawer-title">
+    <div class="drawer-head">
+      <h3 id="playlist-drawer-title">Create Playlist</h3>
+      <button id="playlist-drawer-close" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="drawer-content">
+      <div class="customize">
+        <div class="viz-style">
+          <label>Name</label>
+          <input type="text" id="pl-name2" placeholder="Playlist name"/>
+        </div>
+        <div class="viz-style">
+          <label>Filter</label>
+          <input type="text" id="pl-filter" placeholder="Type to filter…"/>
+        </div>
+        <div class="presets">
+          <button id="pl-create-btn" class="btn primary">Create with selected</button>
+        </div>
+        <div class="list" id="pl-lib-list" style="max-height:50vh; overflow:auto;"></div>
+      </div>
+    </div>
+  </div>
+  <div id="playlist-scrim" class="md-scrim" aria-hidden="true"></div>
+
+  <!-- Playlist Select Drawer (for actions requiring a target) -->
+  <div id="pl-select-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="pl-select-drawer-title">
+    <div class="drawer-head">
+      <h3 id="pl-select-drawer-title">Select Playlist</h3>
+      <button id="pl-select-close" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="drawer-content">
+      <ul id="pl-select-list" class="list"></ul>
+    </div>
+  </div>
+  <div id="pl-select-scrim" class="md-scrim" aria-hidden="true"></div>
 
   <footer>
     <p>&copy; 2025 Avee-like Player (PHP)</p>
@@ -448,31 +498,14 @@
         if (!sd) return;
         sd.classList.toggle('open');
       });
-      if (sdAdd) sdAdd.addEventListener('click', async () => {
-        const name = window.prompt('New playlist name');
-        if (!name) return;
-        try {
-          if (window.PlaylistUI && PlaylistUI.createPlaylistByName) {
-            const res = await PlaylistUI.createPlaylistByName(name);
-            if (res.ok) {
-              try { Toast && Toast.show('Playlist created', 'success', 2000); } catch (_) {}
-            } else {
-              try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
-            }
-          } else {
-            const res = await API.post('api/playlists.php', { action: 'create', name });
-            if (res.ok) {
-              try { Toast && Toast.show('Playlist created', 'success', 2000); } catch (_) {}
-              if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
-            } else {
-              try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
-            }
-          }
-        } catch (err) {
-          console.error('Create playlist error', err);
-          try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
-        } finally {
-          if (sd) sd.classList.remove('open');
+      if (sdAdd) sdAdd.addEventListener('click', () => {
+        if (sd) sd.classList.remove('open');
+        const d = document.getElementById('playlist-drawer');
+        const s = document.getElementById('playlist-scrim');
+        if (d) d.classList.add('open');
+        if (s) s.classList.add('show');
+        if (window.App && App.populatePlaylistCreateList) {
+          App.populatePlaylistCreateList('');
         }
       });
       if (sdAddSmart) sdAddSmart.addEventListener('click', () => {
@@ -550,33 +583,52 @@
       // Speed Dial extra actions: add current / delete selected / open layers
       const sdAddCurrent = qs('sd-add-current');
       if (sdAddCurrent) sdAddCurrent.addEventListener('click', async () => {
+        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
         try {
-          if (window.PlaylistUI && PlaylistUI.addCurrent) {
+          const selId = (typeof PlaylistUI !== 'undefined' && PlaylistUI.getSelectedId) ? PlaylistUI.getSelectedId() : null;
+          if (!selId) {
+            // open select drawer and then add current to chosen playlist
+            App.openPlaylistSelect(async (id, name) => {
+              if (PlaylistUI.selectPlaylist) await PlaylistUI.selectPlaylist(id);
+              if (PlaylistUI.addCurrent) await PlaylistUI.addCurrent();
+              try { Toast && Toast.show(`Added current track to "${name}"`, 'success'); } catch (_) {}
+            });
+            return;
+          }
+          if (PlaylistUI.addCurrent) {
             await PlaylistUI.addCurrent();
-            try { Toast && Toast.show('Added current track', 'success'); } catch (_) {}
-          } else {
-            try { Toast && Toast.show('Select a playlist first', 'error'); } catch (_) {}
+            const plName = document.getElementById('playlist-title')?.textContent || 'Playlist';
+            try { Toast && Toast.show(`Added current track to "${plName}"`, 'success'); } catch (_) {}
           }
         } catch (err) {
           console.error('Add current failed', err);
           try { Toast && Toast.show('Add failed: ' + err.message, 'error'); } catch (_) {}
         }
-        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
       });
       const sdDelPl = qs('sd-del-playlist');
       if (sdDelPl) sdDelPl.addEventListener('click', async () => {
+        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
         const ok = window.confirm('Delete selected playlist?');
         if (!ok) return;
         try {
-          if (window.PlaylistUI && PlaylistUI.deleteSelected) {
+          const selId = (typeof PlaylistUI !== 'undefined' && PlaylistUI.getSelectedId) ? PlaylistUI.getSelectedId() : null;
+          if (!selId) {
+            App.openPlaylistSelect(async (id, name) => {
+              await API.post('api/playlists.php', { action: 'delete', id });
+              if (PlaylistUI.loadPlaylists) await PlaylistUI.loadPlaylists();
+              try { Toast && Toast.show(`Deleted "${name}"`, 'success'); } catch (_) {}
+            });
+            return;
+          }
+          const plName = document.getElementById('playlist-title')?.textContent || 'Playlist';
+          if (PlaylistUI.deleteSelected) {
             await PlaylistUI.deleteSelected();
-            try { Toast && Toast.show('Playlist deleted', 'success'); } catch (_) {}
+            try { Toast && Toast.show(`Deleted "${plName}"`, 'success'); } catch (_) {}
           }
         } catch (err) {
           console.error('Delete playlist failed', err);
           try { Toast && Toast.show('Delete failed: ' + err.message, 'error'); } catch (_) {}
         }
-        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
       });
       const sdLayers = qs('sd-open-layers');
       if (sdLayers) sdLayers.addEventListener('click', () => {

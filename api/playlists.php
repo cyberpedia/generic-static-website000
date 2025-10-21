@@ -130,6 +130,30 @@ if (method_is('POST')) {
         send_json(['error' => 'Not found'], 404);
     }
 
+    // Bulk add tracks to a static playlist
+    if ($action === 'add_tracks_bulk') {
+        $id = $payload['id'] ?? '';
+        $tracks = $payload['tracks'] ?? null;
+        if (!$id || !is_array($tracks)) send_json(['error' => 'Invalid'], 422);
+        foreach ($data['playlists'] as &$pl) {
+            if (($pl['id'] ?? '') === $id) {
+                if (($pl['type'] ?? 'static') === 'smart') {
+                    send_json(['error' => 'Smart playlists are generated automatically'], 400);
+                }
+                foreach ($tracks as $t) {
+                    if (!is_array($t)) continue;
+                    $path = sanitize_relpath($t['path'] ?? '');
+                    $name = sanitize_basename($t['name'] ?? '');
+                    if ($path === '' || $name === '') continue;
+                    $pl['tracks'][] = ['path' => $path, 'name' => $name];
+                }
+                save_playlists($data);
+                send_json(['ok' => true, 'count' => count($tracks)]);
+            }
+        }
+        send_json(['error' => 'Not found'], 404);
+    }
+
     if ($action === 'remove_track') {
         $id = $payload['id'] ?? '';
         $idx = (int)($payload['index'] ?? -1);

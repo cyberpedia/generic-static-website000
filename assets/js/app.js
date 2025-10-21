@@ -45,7 +45,7 @@ const App = (() => {
     // Ensure debug panel is visible
     try { if (window.BUG) { BUG.show(); BUG.log('App.init'); } } catch (_) {}
 
-    // Create AudioContext immediately so visualizer shows; audio starts only on user interaction
+    // Create AudioContext immediately so visualizer shows (audio won't play until user interacts)
     bindUI();
     ensureAudioContext();
     await loadLibrary();
@@ -59,6 +59,14 @@ const App = (() => {
       if (state.timerInterval) clearInterval(state.timerInterval);
       state.timerInterval = setInterval(updateStatus, 1000);
       updateStatus();
+    } catch (_) {}
+
+    // Populate menu playlists if panel is present
+    try {
+      const panel = document.getElementById('top-menu-panel');
+      if (panel && typeof PlaylistUI !== 'undefined' && PlaylistUI.loadPlaylists) {
+        await PlaylistUI.loadPlaylists();
+      }
     } catch (_) {}
   }
 
@@ -703,6 +711,98 @@ ${item.name}`);
 
   function bindUI() {
 
+    // Playlist Create drawer handlers (name + multi-select library)
+    const plDrawer = document.getElementById('playlist-drawer');
+    const plScrim = document.getElementById('playlist-scrim');
+    const plClose = document.getElementById('playlist-drawer-close');
+    const plCreateBtn = document.getElementById('pl-create-btn');
+    const plFilter = document.getElementById('pl-filter');
+
+    function closePlDrawer() {
+      if (plDrawer) plDrawer.classList.remove('open');
+      if (plScrim) plScrim.classList.remove('show');
+    }
+
+    if (plClose) plClose.addEventListener('click', closePlDrawer);
+    if (plScrim) plScrim.addEventListener('click', closePlDrawer);
+
+    if (plFilter) {
+      plFilter.addEventListener('input', () => {
+        populatePlaylistCreateList(plFilter.value);
+      });
+    }
+
+    if (plCreateBtn) {
+      plCreateBtn.addEventListener('click', async () => {
+        const name = (document.getElementById('pl-name2')?.value || '').trim();
+        if (!name) { notify('Enter playlist name', 'error'); return; }
+        // gather selected tracks
+        const list = document.getElementById('pl-lib-list');
+        const checks = list ? Array.from(list.querySelectorAll('input[type="checkbox"]:checked')) : [];
+        const tracks = checks.map(ch => {
+          const idx = Number(ch.dataset.index || '-1');
+          const it = state.library[idx];
+          return it ? { path: it.path, name: it.name } : null;
+        }).filter(Boolean);
+        try {
+          const res = await API.post('api/playlists.php', { action: 'create', name });
+          if (!res.ok) { notify(res.error || 'Failed to create', 'error'); return; }
+          const id = res.playlist.id;
+          if (tracks.length) {
+            const r2 = await API.post('api/playlists.php', { action: 'add_tracks_bulk', id, tracks });
+            if (!r2.ok) { notify(r2.error || 'Failed adding tracks', 'error'); }
+          }
+          // Refresh playlists and select the new one
+          if (typeof PlaylistUI !== 'undefined' && PlaylistUI.loadPlaylists) {
+            await PlaylistUI.loadPlaylists();
+            if (PlaylistUI.selectPlaylist) await PlaylistUI.selectPlaylist(id);
+          }
+          notify('Playlist created', 'success');
+          closePlDrawer();
+        } catch (err) {
+          notify('Create failed: ' + err.message, 'error');
+        }
+      });
+    }
+
+    // Playlist Select drawer (for add/delete actions when none selected)
+    const plSelDrawer = document.getElementById('pl-select-drawer');
+    const plSelScrim = document.getElementById('pl-select-scrim');
+    const plSelClose = document.getElementById('pl-select-close');
+
+    function openPlaylistSelect(onChoose) {
+      (async () => {
+        try {
+          const data = await API.get('api/playlists.php');
+          const ul = document.getElementById('pl-select-list');
+          if (ul) {
+            ul.innerHTML = '';
+            (data.playlists || []).forEach(pl => {
+              const li = document.createElement('li');
+              li.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
+              li.addEventListener('click', async () => {
+                if (onChoose) await onChoose(pl.id);
+                closePlSelect();
+              });
+              ul.appendChild(li);
+            });
+          }
+          if (plSelDrawer) plSelDrawer.classList.add('open');
+          if (plSelScrim) plSelScrim.classList.add('show');
+        } catch (err) {
+          notify('Failed to load playlists', 'error');
+        }
+      })();
+    }
+
+    function closePlSelect() {
+      if (plSelDrawer) plSelDrawer.classList.remove('open');
+      if (plSelScrim) plSelScrim.classList.remove('show');
+    }
+
+    if (plSelClose) plSelClose.addEventListener('click', closePlSelect);
+    if (plSelScrim) plSelScrim.addEventListener('click', closePlSelect);
+
     document.getElementById('play').addEventListener('click', async () => {
       ensureAudioContext();
       logAction('player.playButton');
@@ -923,28 +1023,46 @@ ${item.name}`);
     const up = document.getElementById('upload-input');
     up.addEventListener('change', async () => {
       const files = Array.from(up.files || []);
-      logAction('upload.files', files.map(f => ({ name: f.name, size: f.size })));
-      let okCount = 0, errCount = 0;
-      for (const f of files) {
-        try {
-          const res = await API.upload('api/upload.php', f);
-          logAction('upload.result', res);
-          if (res.ok) okCount++;
-          else { errCount++; notify(res.error || `Upload failed: ${f.name}`, 'error'); }
-        } catch (err) {
-          console.error('Upload failed', err);
-          errCount++;
-          notify(`Upload failed: ${f.name}`, 'error');
-          logAction('upload.error', { message: err.message });
-        }
-      }
-      // Force server-side rescan to update index
-      try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
-
-      await loadLibrary(true);
-      if (okCount > 0) notify(`Uploaded ${okCount} file(s)`, 'success');
-      if (errCount > 0) notify(`${errCount} upload(s) failed`, 'error');
+      await uploadQueue(files);
       up.value = '';
+    });
+
+    // Floating tools bindings
+    const fSearch = document.getElementById('float-search');
+    const fRescan = document.getElementById('float-rescan');
+    const fUpload = document.getElementById('float-upload-input');
+    const fImportUrl = document.getElementById('float-import-url');
+    const fImportBtn = document.getElementById('float-import-btn');
+
+    if (fSearch) fSearch.addEventListener('input', (e) => {
+      const q = e.target.value;
+      filterLibrary(q);
+      const libSearch = document.getElementById('search'); if (libSearch) libSearch.value = q;
+    });
+    if (fRescan) fRescan.addEventListener('click', async () => {
+      await loadLibrary(true);
+      notify('Library refreshed', 'success', 2000);
+    });
+    if (fUpload) fUpload.addEventListener('change', async () => {
+      const files = Array.from(fUpload.files || []);
+      await uploadQueue(files);
+      fUpload.value = '';
+    });
+    if (fImportBtn) fImportBtn.addEventListener('click', async () => {
+      const url = (fImportUrl.value || '').trim();
+      if (!url) return;
+      try {
+        const res = await API.post('api/remote_import.php', { url });
+        if (!res.ok) {
+          notify(res.error || 'Import failed', 'error');
+        } else {
+          notify('Imported audio from URL', 'success');
+          try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
+          await loadLibrary(true);
+        }
+      } catch (err) {
+        notify('Import failed: ' + err.message, 'error');
+      }
     });
 
     document.getElementById('viz-style').addEventListener('change', (e) => {
@@ -1345,6 +1463,60 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     logAction('record.start');
   }
 
+  // Upload queue with concurrency + overlay status to reduce lag
+  async function uploadQueue(files) {
+    const overlay = document.getElementById('upload-overlay');
+    const status = document.getElementById('upload-status');
+    const total = files.length;
+    let done = 0, ok = 0, err = 0;
+    const limit = 2; // concurrency
+    const queue = files.slice();
+    const running = [];
+
+    function updateStatus() {
+      if (status) status.textContent = `Uploading ${done}/${total}…`;
+    }
+    function showOverlay(on) {
+      if (overlay) overlay.classList.toggle('show', !!on);
+    }
+
+    showOverlay(true);
+    updateStatus();
+
+    async function worker(file) {
+      try {
+        const res = await API.upload('api/upload.php', file);
+        if (res.ok) ok++; else { err++; notify(res.error || `Upload failed: ${file.name}`, 'error'); }
+      } catch (e) {
+        err++;
+        notify(`Upload failed: ${file.name}`, 'error');
+      } finally {
+        done++;
+        updateStatus();
+      }
+    }
+
+    while (queue.length || running.length) {
+      while (queue.length && running.length < limit) {
+        const f = queue.shift();
+        const p = worker(f).finally(() => {
+          const i = running.indexOf(p);
+          if (i >= 0) running.splice(i, 1);
+        });
+        running.push(p);
+      }
+      await Promise.race(running).catch(()=>{});
+    }
+
+    // One rescan at the end
+    try { await API.post('api/library.php', { action: 'rescan' }); } catch (_) {}
+    await loadLibrary(true);
+
+    showOverlay(false);
+    if (ok > 0) notify(`Uploaded ${ok} file(s)`, 'success');
+    if (err > 0) notify(`${err} upload(s) failed`, 'error');
+  }
+
   function arrayBufferToBase64(buffer) {
     let binary = '';
     const bytes = new Uint8Array(buffer);
@@ -1460,7 +1632,75 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     });
   }
 
-  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI };
+  // Populate Playlist Create drawer list from library
+  function populatePlaylistCreateList(filter = '') {
+    const container = document.getElementById('pl-lib-list');
+    if (!container) return;
+    const q = String(filter || '').toLowerCase();
+    container.innerHTML = '';
+    const items = state.library.filter(it => !q || (it.name || '').toLowerCase().includes(q));
+    items.forEach((it, idx) => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.justifyContent = 'space-between';
+      row.style.padding = '6px 8px';
+      row.style.borderBottom = '1px dashed #2a3350';
+
+      const left = document.createElement('label');
+      left.style.display = 'inline-flex';
+      left.style.alignItems = 'center';
+      left.style.gap = '8px';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.dataset.index = String(idx);
+
+      const name = document.createElement('span');
+      name.textContent = it.name || it.path;
+
+      left.appendChild(cb);
+      left.appendChild(name);
+
+      const play = document.createElement('button');
+      play.className = 'btn secondary';
+      play.textContent = 'Play';
+      play.addEventListener('click', () => playTrack(it));
+
+      row.appendChild(left);
+      row.appendChild(play);
+
+      container.appendChild(row);
+    });
+  }
+
+  // Open Playlist Select drawer and execute callback with chosen id
+  async function openPlaylistSelect(onChoose) {
+    const drawer = document.getElementById('pl-select-drawer');
+    const scrim = document.getElementById('pl-select-scrim');
+    const ul = document.getElementById('pl-select-list');
+    if (!drawer || !ul) return;
+    try {
+      const data = await API.get('api/playlists.php');
+      ul.innerHTML = '';
+      (data.playlists || []).forEach(pl => {
+        const li = document.createElement('li');
+        li.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
+        li.addEventListener('click', async () => {
+          if (typeof onChoose === 'function') await onChoose(pl.id, pl.name);
+          drawer.classList.remove('open');
+          if (scrim) scrim.classList.remove('show');
+        });
+        ul.appendChild(li);
+      });
+      drawer.classList.add('open');
+      if (scrim) scrim.classList.add('show');
+    } catch (err) {
+      notify('Failed to load playlists', 'error');
+    }
+  }
+
+  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, populatePlaylistCreateList, openPlaylistSelect, ensureAudioContext };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
