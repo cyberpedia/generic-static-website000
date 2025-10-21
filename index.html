@@ -233,6 +233,15 @@
                 </div>
                 <div class="viz-tuning">
                   <label>Segments <input type="range" id="layer-segments" min="1" max="8" step="1" value="2"></label>
+                  <label>Blend Mode
+                    <select id="layer-blend">
+                      <option value="lighter" selected>Lighter</option>
+                      <option value="normal">Normal</option>
+                      <option value="screen">Screen</option>
+                      <option value="multiply">Multiply</option>
+                    </select>
+                  </label>
+                  <label>Opacity <input type="range" id="layer-alpha" min="0" max="1" step="0.05" value="1"></label>
                 </div>
                 <div class="presets">
                   <button id="layer-add2" class="btn primary">Add Layer</button>
@@ -371,7 +380,6 @@
       <button id="sd-add-smart" class="icon-btn" title="Add Smart Playlist">⚙️</button>
       <button id="sd-add-current" class="icon-btn" title="Add Current Track">➕🎵</button>
       <button id="sd-del-playlist" class="icon-btn danger" title="Delete Selected Playlist">🗑</button>
-      <button id="sd-open-layers" class="icon-btn" title="Layers">☷</button>
     </div>
   </div>
 
@@ -644,6 +652,8 @@
           const c1 = (qs('layer-color-1')?.value) || '#19d3ae';
           const c2 = (qs('layer-color-2')?.value) || '#1e90ff';
           const seg = Number((qs('layer-segments')?.value) || 2);
+          const blend = (qs('layer-blend')?.value) || 'lighter';
+          const alpha = Number((qs('layer-alpha')?.value) || 1);
           const idx = App.state.viz.addLayer(style, {
             color1: c1, color2: c2,
             rotation: Number(document.getElementById('viz-rot').value || 0.6),
@@ -652,7 +662,9 @@
             radialFloor: Number(document.getElementById('viz-radial-floor').value || 0.16),
             spikeScale: Number(document.getElementById('viz-spike-scale').value || 1),
             waveScale: Number(document.getElementById('viz-wave-scale').value || 1),
-            segments: Math.max(1, Math.min(8, seg))
+            segments: Math.max(1, Math.min(8, seg)),
+            blend,
+            alpha
           });
           App.state.viz.selectLayer(idx);
           App.renderLayersUI();

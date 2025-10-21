@@ -323,7 +323,10 @@
         spikeScale: params.spikeScale ?? this.spikeScale,
         waveScale: params.waveScale ?? this.waveScale,
         segments: params.segments ?? this.segments,
-        rotation: params.rotation ?? this.rotation
+        rotation: params.rotation ?? this.rotation,
+        // per-layer blending
+        blend: params.blend ?? 'lighter',  // 'lighter' blends colors additively
+        alpha: params.alpha ?? 1.0         // opacity for this layer
       };
       this.layers.push(L);
       if (this.sel < 0) this.sel = 0;
@@ -721,6 +724,12 @@
         ctx.fillStyle = grad;
         ctx.strokeStyle = grad;
 
+        // per-layer blend and alpha (overlay)
+        const blendMode = (L.blend || 'source-over');
+        const alpha = (typeof L.alpha === 'number') ? Math.max(0, Math.min(1, L.alpha)) : 1.0;
+        this.ctx.globalCompositeOperation = blendMode;
+        this.ctx.globalAlpha = alpha;
+
         const style = L.style || this.style;
         if (style === 'bars') this.drawBars(w, h, L);
         else if (style === 'wave') this.drawWave(w, h, L);
@@ -730,6 +739,10 @@
         else if (style === 'particles') this.drawParticles(w, h, L);
         else this.drawCircle(w, h, L);
       }
+
+      // reset composite/alpha for overlays
+      this.ctx.globalCompositeOperation = 'source-over';
+      this.ctx.globalAlpha = 1.0;
 
       if (this.bpmEnabled && this.bpm) {
         ctx.save();

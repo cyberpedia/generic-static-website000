@@ -271,8 +271,9 @@ footer {
 /* Floating Tools Panel */
 .md-float-tools {
   position: fixed;
-  left: 16px;
-  bottom: 96px;
+  top: 64px;             /* below sticky appbar */
+  right: 16px;
+  left: auto;
   z-index: 1100;
   display: grid;
   grid-auto-flow: column;
@@ -297,7 +298,7 @@ footer {
   .md-float-tools {
     left: 10px;
     right: 10px;
-    bottom: 84px;
+    top: 56px; /* compact top spacing on phones */
     grid-auto-flow: row;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
