@@ -48,7 +48,7 @@ const App = window.App = (() => {
     // Bind UI; AudioContext will be created on explicit user actions (Play, Add Layer, etc.)
     bindUI();
     await loadLibrary();
-    try { if (typeof PlaylistUI !== 'undefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (__codendefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (_) {}
+    try { if (typeof PlaylistUI !== 'undefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (_) {}
 
     // Default slider value; actual volume applied once AudioContext is created
     document.getElementById('volume').value = 0.9;
