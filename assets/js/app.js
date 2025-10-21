@@ -1,4 +1,4 @@
-const App = (() => {
+const App = window.App = (() => {
   const state = {
     ctx: null,
     eq: null,
@@ -45,13 +45,10 @@ const App = (() => {
     // Ensure debug panel is visible
     try { if (window.BUG) { BUG.show(); BUG.log('App.init'); } } catch (_) {}
 
-    // Bind UI; defer AudioContext creation until first user gesture
+    // Bind UI; AudioContext will be created on explicit user actions (Play, Add Layer, etc.)
     bindUI();
-    document.addEventListener('pointerdown', () => {
-      try { ensureAudioContext(); } catch (_) {}
-    }, { once: true });
     await loadLibrary();
-    try { if (typeof PlaylistUI !== 'undefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (_) {}
+    try { if (typeof PlaylistUI !== 'undefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (__codendefined') PlaylistUI.init({ playTrack, getCurrentTrack: () => state.currentTrack }); } catch (_) {}
 
     // Default slider value; actual volume applied once AudioContext is created
     document.getElementById('volume').value = 0.9;
