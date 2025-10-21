@@ -6,10 +6,14 @@
 
     function init(app) {
       state.app = app;
-      document.getElementById('create-playlist').addEventListener('click', createPlaylist);
-      document.getElementById('create-smart').addEventListener('click', createSmartPlaylist);
-      document.getElementById('add-current').addEventListener('click', addCurrent);
-      document.getElementById('delete-playlist').addEventListener('click', deleteSelected);
+      const btnCreate = document.getElementById('create-playlist');
+      if (btnCreate) btnCreate.addEventListener('click', createPlaylist);
+      const btnSmart = document.getElementById('create-smart');
+      if (btnSmart) btnSmart.addEventListener('click', createSmartPlaylist);
+      const btnAddCurrent = document.getElementById('add-current');
+      if (btnAddCurrent) btnAddCurrent.addEventListener('click', addCurrent);
+      const btnDelete = document.getElementById('delete-playlist');
+      if (btnDelete) btnDelete.addEventListener('click', deleteSelected);
       loadPlaylists();
     }
 
@@ -65,14 +69,25 @@
 
     async function createPlaylist() {
       const nameInput = document.getElementById('new-playlist-name');
-      const name = nameInput.value.trim();
+      const name = nameInput ? nameInput.value.trim() : '';
       if (!name) return;
       const res = await API.post('api/playlists.php', { action: 'create', name });
-      nameInput.value = '';
+      if (nameInput) nameInput.value = '';
       if (res.ok) {
         loadPlaylists();
         selectPlaylist(res.playlist.id);
       }
+    }
+
+    async function createPlaylistByName(name) {
+      const n = String(name || '').trim();
+      if (!n) return { ok: false, error: 'Empty name' };
+      const res = await API.post('api/playlists.php', { action: 'create', name: n });
+      if (res.ok) {
+        await loadPlaylists();
+        await selectPlaylist(res.playlist.id);
+      }
+      return res;
     }
 
     async function createSmartPlaylist() {
@@ -131,6 +146,6 @@
       }
     }
 
-    return { init, selectPlaylist };
+    return { init, selectPlaylist, createPlaylistByName };
   })();
 })();

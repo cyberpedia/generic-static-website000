@@ -14,18 +14,7 @@
     <div class="appbar-row">
       <button id="top-menu" class="icon-btn" aria-label="Menu" title="Menu">☰</button>
       <div class="appbar-title">Avee-like Media Player</div>
-      <div class="appbar-actions">
-        <input type="text" id="top-search" class="appbar-input" placeholder="Search…" aria-label="Search" />
-        <label class="upload-btn appbar-upload" title="Upload audio files">
-          Upload
-          <input type="file" id="top-upload-input" accept="audio/*" multiple />
-        </label>
-        <button id="top-rescan" class="btn secondary" title="Rescan music folder" aria-label="Rescan">Rescan</button>
-        <div class="import-inline" aria-label="Import from URL">
-          <input type="url" id="top-import-url" class="appbar-input" placeholder="Import URL" aria-label="Import URL"/>
-          <button id="top-import-btn" class="btn secondary" title="Import from URL" aria-label="Import">Import</button>
-        </div>
-      </div>
+      <div class="appbar-actions"></div>
     </div>
   </header>
   <main>
@@ -40,19 +29,28 @@
             <input type="file" id="upload-input" accept="audio/*" multiple />
           </label>
         </div>
-        <div class="toolbar">
-          <input type="url" id="import-url" placeholder="Import audio URL (e.g., Dropbox direct link)" />
-          <button id="import-url-btn" title="Download from URL">Import</button>
-        </div>
-        <div class="toolbar">
-          <button id="connect-dropbox" class="btn">Connect Dropbox</button>
-          <button id="connect-google" class="btn">Connect Google Drive</button>
-        </div>
+        <details class="lib-collapsible">
+          <summary>Import from URL</summary>
+          <div class="toolbar">
+            <input type="url" id="import-url" placeholder="Import audio URL (e.g., Dropbox direct link)" />
+            <button id="import-url-btn" title="Download from URL">Import</button>
+          </div>
+        </details>
+
+        <details class="lib-collapsible">
+          <summary>Cloud Connections</summary>
+          <div class="toolbar">
+            <button id="connect-dropbox" class="btn">Connect Dropbox</button>
+            <button id="connect-google" class="btn">Connect Google Drive</button>
+          </div>
+        </details>
+
         <ul id="library-list" class="list"></ul>
-        <div style="margin-top:0.6rem;">
-          <h4 style="margin:0.4rem 0;">Cloud Files</h4>
+
+        <details class="lib-collapsible">
+          <summary>Cloud Files</summary>
           <ul id="cloud-list" class="list"></ul>
-        </div>
+        </details>
       </aside>
 
       <!-- Player Core -->
@@ -236,11 +234,7 @@
               <h3>Layers</h3>
               <button id="layer-add" class="btn primary">+</button>
             </div>
-            <ul id="layers-list" class="layers">
-              <li data-layer="circle"><span class="handle">⋮⋮</span><span class="name">Circle</span><span class="actions"><button class="eye btn secondary" title="Visible">👁</button><button class="gear btn secondary" title="Settings">⚙️</button><button class="trash btn danger" title="Delete">🗑</button></span></li>
-              <li data-layer="image"><span class="handle">⋮⋮</span><span class="name">Image</span><span class="actions"><button class="eye btn secondary">👁</button><button class="gear btn secondary">⚙️</button><button class="trash btn danger">🗑</button></span></li>
-              <li data-layer="background"><span class="handle">⋮⋮</span><span class="name">Background</span><span class="actions"><button class="eye btn secondary">👁</button><button class="gear btn secondary">⚙️</button><button class="trash btn danger">🗑</button></span></li>
-            </ul>
+            <ul id="layers-list" class="layers"></ul>
           </div>
 
           <!-- Project actions -->
@@ -285,10 +279,7 @@
 
       <!-- Playlists Sidebar -->
       <aside class="sidebar playlists">
-        <div class="toolbar">
-          <input type="text" id="new-playlist-name" placeholder="New playlist name"/>
-          <button id="create-playlist">Create</button>
-        </div>
+        <!-- Create Playlist moved to Speed Dial -->
         <div class="toolbar">
           <input type="text" id="smart-name" placeholder="Smart name"/>
           <input type="text" id="smart-contains" placeholder="Name contains"/>
@@ -311,7 +302,14 @@
     </div>
   </main>
 
-  
+  <!-- Speed Dial (Quick Add) -->
+  <div id="speed-dial" class="md-speed-dial" aria-label="Quick actions">
+    <button id="sd-toggle" class="md-fab" title="Quick actions">＋</button>
+    <div class="dial-items">
+      <button id="sd-add-playlist" class="icon-btn" title="Add Playlist">📝</button>
+    </div>
+  </div>
+
   <footer>
     <p>&copy; 2025 Avee-like Player (PHP)</p>
   </footer>
@@ -328,13 +326,14 @@
   <script src="assets/js/toast.js?v=20251020-17"></script>
   <script src="assets/script.js?v=20251020-17"></script>
   <script>
-    // Drawer open/close handling
+    // Drawer open/close handling + top menu + speed dial
     (function() {
       function qs(id){ return document.getElementById(id); }
       const fab = qs('fab-customize');
       const drawer = qs('viz-drawer');
       const scrim = qs('viz-scrim');
       const closeBtn = qs('viz-drawer-close');
+      const menuBtn = qs('top-menu');
 
       function openDrawer() {
         if (!drawer) return;
@@ -348,10 +347,47 @@
       }
 
       if (fab) fab.addEventListener('click', openDrawer);
+      if (menuBtn) menuBtn.addEventListener('click', openDrawer);
       if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
       if (scrim) scrim.addEventListener('click', closeDrawer);
       window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeDrawer();
+      });
+
+      // Speed Dial: quick add playlist
+      const sd = qs('speed-dial');
+      const sdToggle = qs('sd-toggle');
+      const sdAdd = qs('sd-add-playlist');
+      if (sdToggle) sdToggle.addEventListener('click', () => {
+        if (!sd) return;
+        sd.classList.toggle('open');
+      });
+      if (sdAdd) sdAdd.addEventListener('click', async () => {
+        const name = window.prompt('New playlist name');
+        if (!name) return;
+        try {
+          if (window.PlaylistUI && PlaylistUI.createPlaylistByName) {
+            const res = await PlaylistUI.createPlaylistByName(name);
+            if (res.ok) {
+              try { Toast && Toast.show('Playlist created', 'success', 2000); } catch (_) {}
+            } else {
+              try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
+            }
+          } else {
+            const res = await API.post('api/playlists.php', { action: 'create', name });
+            if (res.ok) {
+              try { Toast && Toast.show('Playlist created', 'success', 2000); } catch (_) {}
+              if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
+            } else {
+              try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
+            }
+          }
+        } catch (err) {
+          console.error('Create playlist error', err);
+          try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
+        } finally {
+          if (sd) sd.classList.remove('open');
+        }
       });
     })();
   </script>

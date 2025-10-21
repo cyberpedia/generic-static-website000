@@ -596,6 +596,51 @@ footer {
 
 /* Logger legacy panel removed in favor of console-panel */
 
+/* Speed Dial (Quick actions) */
+.md-speed-dial {
+  position: fixed;
+  right: 88px;
+  bottom: 96px; /* above bottom nav */
+  z-index: 1100;
+}
+.md-speed-dial .dial-items {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: flex-end;
+}
+.md-speed-dial.open .dial-items { display: flex; }
+.md-speed-dial .icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  background: var(--md-secondary);
+  color: var(--md-text);
+  border-radius: 12px;
+}
+
+/* Collapsible details in Library */
+.lib-collapsible {
+  border: 1px solid var(--md-panel-border);
+  border-radius: 10px;
+  margin: 0.4rem 0;
+  background: var(--md-panel);
+  overflow: hidden;
+}
+.lib-collapsible > summary {
+  cursor: pointer;
+  padding: 0.5rem 0.6rem;
+  font-weight: 600;
+  color: var(--md-label);
+  list-style: none;
+}
+.lib-collapsible[open] > summary {
+  border-bottom: 1px solid var(--md-panel-border);
+}
+.lib-collapsible .toolbar {
+  padding: 0.6rem;
+}
+
 .art-and-info {
   display: grid;
   grid-template-columns: 120px 1fr;
@@ -744,7 +789,7 @@ canvas#viz {
 /* Visualizer tuning controls */
 .customize .viz-tuning {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  grid-template-columns: 1fr; /* always vertical, one slider per row */
   gap: 0.6rem;
   align-items: center;
 }
@@ -857,12 +902,7 @@ canvas#viz {
 }
 
 /* Responsive */
-@media (max-width: 1100px) {
-  /* legacy grid safe-guard: collapse any accidental grid usage */
-  .app-grid {
-    display: block;
-  }
-}
+/* removed legacy grid collapse to preserve grid ordering */
 
 /* Collapse to single column earlier so phones don't see split layout */
 @media (max-width: 1200px) {
@@ -921,7 +961,7 @@ canvas#viz {
     grid-column: span 3;
   }
   .customize .viz-tuning {
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
+    grid-template-columns: 1fr; /* single column for sliders */
   }
   .eq-panel .bands {
     grid-template-columns: repeat(5, 1fr);

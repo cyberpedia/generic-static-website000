@@ -857,7 +857,7 @@
       this.ctx.save();
       this.ctx.lineCap = 'round';
 
-      const segs = Math.max(1, (this.fast ? Math.max(1, Math.floor(segments / 2)) : segments) | 0);
+      const segs = Math.max(1, (segments | 0));
       for (let i = 0; i < bins; i++) {
         const v = peaks[i];
         const colorT = i / (bins - 1);
@@ -926,9 +926,9 @@
       const spikeScale = Math.min(h / 4, r * 0.65) * spikeScaleParam;
 
       const pulse = Math.pow(Math.max(0, this.beatLevel), 1.2) * this.beatBoost;
-      const segs = Math.max(1, (this.fast ? Math.max(1, Math.floor(segments / 2)) : segments) | 0);
+      const segs = Math.max(1, (segments | 0));
       for (let i = 0; i < bins; i++) {
-        const v = peaks[i];
+        const v = (peaks[i] + peaks[bins - 1 - i]) / 2;
         const lw = (this.fast ? (1.4 + v * 1.8) : (1.8 + v * 2.0)) * thickness;
         for (let s = 0; s < segs; s++) {
           const tIdx = (i + s * bins);
