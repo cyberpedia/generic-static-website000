@@ -101,7 +101,8 @@
             <ul id="layers-fab-list" class="layers"></ul>
           </div>
           <!-- Type menu for add (+) -->
-          <div id="fab-menu" class="md-popmenu" aria-label="Add Layer Menu">
+          <div id="fab-menu" class="md-popmenu" aria-label="Actions">
+            <button class="icon-btn" data-action="customize">✎ Customize</button>
             <button class="icon-btn" data-type="circle">＋ Add Circle</button>
             <button class="icon-btn" data-type="radial">＋ Add Radial Bars</button>
             <button class="icon-btn" data-type="ring">＋ Add Ring Wave</button>
@@ -163,6 +164,14 @@
                     <select id="theme-select">
                       <option value="dark" selected>Dark</option>
                       <option value="light">Light</option>
+                    </select>
+                  </div>
+                  <div class="resolution">
+                    <label>Resolution</label>
+                    <select id="viz-res">
+                      <option value="auto" selected>Auto</option>
+                      <option value="1080p-landscape">1920 × 1080</option>
+                      <option value="1080p-portrait">1080 × 1920</option>
                     </select>
                   </div>
                 </div>
@@ -577,7 +586,17 @@
         menu.addEventListener('click', (e) => {
           const btn = e.target.closest('button');
           if (!btn) return;
+          const action = btn.dataset.action;
           const type = btn.dataset.type;
+          if (action === 'customize') {
+            // Open Customize drawer
+            const d = document.getElementById('viz-drawer');
+            const s = document.getElementById('viz-scrim');
+            if (d) d.classList.add('open');
+            if (s) s.classList.add('show');
+            closeMenu();
+            return;
+          }
           if (type) addLayerOfType(type);
         });
       }

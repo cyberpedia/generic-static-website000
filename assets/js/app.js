@@ -200,7 +200,7 @@ const App = window.App = (() => {
     setVolume(Number(document.getElementById('volume').value || 0.9));
   }
 
-  // Canvas reflow obeying orientation setting
+  // Canvas reflow obeying orientation + resolution setting
   function reflowCanvas() {
     const canvas = document.getElementById('viz');
     if (!canvas) return;
@@ -214,15 +214,22 @@ const App = window.App = (() => {
     else if (state.orientation === 'portrait') isLandscape = false;
     else isLandscape = vw > vh;
 
-    // Portrait should be taller; Landscape more compact
-    const portraitRatio = 0.65;
-    const landscapeRatio = 0.45;
+    // Use resolution preset to set display height ratio based on aspect
+    let aspectW = 16, aspectH = 9;
+    if (state.resolution === '1080p-portrait' || (!isLandscape && state.resolution === '1080p-landscape')) {
+      aspectW = 9; aspectH = 16;
+    }
 
-    let targetH = isLandscape
-      ? Math.round(Math.min(420, Math.max(140, vh * landscapeRatio)))
-      : Math.round(Math.min(480, Math.max(160, vh * portraitRatio)));
+    // Choose a display height that maintains aspect without exceeding viewport
+    // Target width is panel/container width; we control height to maintain aspect
+    const containerWidth = canvas.parentElement ? canvas.parentElement.clientWidth : vw;
+    const displayHeight = Math.min(
+      Math.floor(containerWidth * (aspectH / aspectW)),
+      isLandscape ? Math.round(Math.min(540, Math.max(160, vh * 0.50)))
+                  : Math.round(Math.min(720, Math.max(180, vh * 0.70)))
+    );
 
-    canvas.style.height = targetH + 'px';
+    canvas.style.height = displayHeight + 'px';
     try { state.viz && state.viz.resize(); } catch (_) {}
   }
 
@@ -568,7 +575,7 @@ ${item.name}`);
     const trail = document.getElementById('viz-trail');
     if (trail) {
       const lab = trail.closest('label') || trail.parentElement;
-      if (lab) lab.style.display = (s === 'circle') ? 'none' : '';
+      if (lab) lab.style.display = '';
     }
     const bpmToggle = document.getElementById('viz-bpm');
     if (bpmToggle) {
@@ -1004,6 +1011,31 @@ ${item.name}`);
         logAction('viz.orientation', { value: state.orientation });
       });
     }
+
+    // Resolution selector
+    const resSel = document.getElementById('viz-res');
+    if (resSel) {
+      resSel.addEventListener('change', () => {
+        const val = resSel.value || 'auto';
+        state.resolution = val;
+        applyResolution();
+        logAction('viz.resolution', { value: state.resolution });
+      });
+    }
+
+    function applyResolution() {
+      if (!state.viz) return;
+      if (state.resolution === '1080p-landscape') {
+        state.viz.setResolution(1920, 1080);
+      } else if (state.resolution === '1080p-portrait') {
+        state.viz.setResolution(1080, 1920);
+      } else {
+        // auto: clear forced resolution
+        state.viz.setResolution(0, 0);
+      }
+      reflowCanvas();
+    }
+
     const themeSel = document.getElementById('theme-select');
     if (themeSel) {
       themeSel.addEventListener('change', () => {
@@ -1704,11 +1736,12 @@ ${state.currentTrack.name || state.currentTrack.path}`);
         ['layer-rot','layer-decay','layer-thickness','layer-ring-floor','layer-spike-scale','layer-edit-segments'].forEach(id => showIds.add(id));
       } else if (s === 'image') {
         // image fields already shown above; hide most tuning sliders
-        ['layer-edit-blend','layer-edit-alpha'].forEach(id => showIds.add(id));
       } else if (s === 'background') {
-        // background: just colors, blend, alpha; tuning sliders hidden
-        ['layer-edit-blend','layer-edit-alpha'].forEach(id => showIds.add(id));
+        // background: just colors; tuning sliders hidden
       }
+
+      // Always show blend/alpha overlays regardless of style
+      ['layer-edit-blend','layer-edit-alpha'].forEach(id => showIds.add(id));
 
       const ALL = [
         'layer-rot','layer-decay','layer-thickness','layer-ring-floor','layer-radial-floor',

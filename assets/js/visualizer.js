@@ -88,6 +88,10 @@
       // Frame rate (ms between frames) - defaults to ~60fps
       this.frameIntervalMs = 16;
 
+      // Optional forced resolution (pixel size) for export/view
+      this.forcedW = null;
+      this.forcedH = null;
+
       this.resize();
       window.addEventListener('resize', () => this.resize());
     }
@@ -305,9 +309,9 @@
 
     resize() {
       const dpr = window.devicePixelRatio || 1;
-      const w = this.canvas.clientWidth;
-      const h = this.canvas.clientHeight;
-      this.canvas.width = Math.floor(w * dpr);
+      if (this.forcedW && this.forcedH) {
+        // Use forced pixel resolution
+        this.canvas.width = Math.floor(w * dpr);
       this.canvas.height = Math.floor(h * dpr);
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
@@ -529,6 +533,17 @@
     setProgress(p) {
       this.progress = Math.max(0, Math.min(1, Number(p) || 0));
     }
+
+    setResolution(width, height) {
+      const w = Number(width), h = Number(height);
+      if (!(w > 0 && h > 0)) {
+        this.forcedW = null;
+        this.forcedH = null;
+      } else {
+        this.forcedW = w;
+        this.forcedH = h;
+      }
+      this }
 
     getStereoSpectrum(bins, gamma = 1.0, floorOverride = null) {
       if (!this.analyserL || !this.analyserR) {
