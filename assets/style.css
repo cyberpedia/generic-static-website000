@@ -530,9 +530,7 @@ footer {
   border-radius: 14px;
   padding: clamp(10px, 2vw, 16px);
   box-shadow: 0 16px 40px var(--md-shadow);
-  margin-top: clamp(10px, 2vw, 16px_code);new
-</}
-);
+  margin-top: clamp(10px, 2vw, 16px);
 }
 .panel-head {
   display: flex;

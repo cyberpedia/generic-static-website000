@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Avee-like Media Player (PHP/XAMPP)</title>
-  <link rel="stylesheet" href="assets/style.css?v=20251020-18">
+  <link rel="stylesheet" href="assets/style.css?v=20251020-19">
   
   <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
@@ -17,10 +17,7 @@
       <div class="appbar-actions"></div>
     </div>
   </header>
-  <div id="top-menu-panel" class="md-menu" aria-label="Menu">
-    <button id="menu-create-playlist" class="btn secondary">Create Playlist</button>
-    <button id="menu-create-smart" class="btn secondary">Create Smart</button>
-  </div>
+  
   <main>
     <div id="app" class="md-container md-grid app-grid">
       <!-- Library Sidebar -->
@@ -98,8 +95,8 @@
           </div>
 
           <!-- Floating Customize button + drawer -->
-         <<button id="fab-customize" class="md-fab" aria-label="Customize visualizer" title="Customize"</</button>
-         < button id="fab-layers" class="md-fab" aria-label="Layers" title="Layers">☷
+          <button id="fab-customize" class="md-fab" aria-label="Customize visualizer" title="Customize">✎</button>
+          <button id="fab-layers" class="md-fab" aria-label="Layers" title="Layers">☷</button>
           <div id="viz-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="viz-drawer-title">
             <div class="drawer-head">
               <h3 id="viz-drawer-title">Customize Visualizer</h3>
@@ -283,16 +280,6 @@
 
       <!-- Playlists Sidebar -->
       <aside class="sidebar playlists">
-        <!-- Create Playlist moved to Speed Dial -->
-        <div class="toolbar">
-          <input type="text" id="smart-name" placeholder="Smart name"/>
-          <input type="text" id="smart-contains" placeholder="Name contains"/>
-          <input type="text" id="smart-exts" placeholder="Exts (e.g. mp3,ogg)"/>
-          <input type="text" id="smart-folder" placeholder="Folder prefix"/>
-          <input type="number" id="smart-minmb" placeholder="Min MB" min="0"/>
-          <input type="number" id="smart-maxmb" placeholder="Max MB" min="0"/>
-          <button id="create-smart">Create Smart</button>
-        </div>
         <ul id="playlists" class="list"></ul>
         <div id="playlist-details" class="playlist-details">
           <h3 id="playlist-title">Playlist</h3>
@@ -311,6 +298,7 @@
     <button id="sd-toggle" class="md-fab" title="Quick actions">＋</button>
     <div class="dial-items">
       <button id="sd-add-playlist" class="icon-btn" title="Add Playlist">📝</button>
+      <button id="sd-add-smart" class="icon-btn" title="Add Smart Playlist">⚙️</button>
     </div>
   </div>
 
@@ -322,7 +310,7 @@
 
   <script src="assets/js/utils.js?v=20251020-17"></script>
   <script src="assets/js/equalizer.js?v=20251020-17"></script>
-  <script src="assets/js/visualizer.js?v=20251020-18"></script>
+  <script src="assets/js/visualizer.js?v=20251020-19"></script>
   <script src="assets/js/playlists.js?v=20251020-17"></script>
   <script src="assets/js/settings.js?v=20251020-17"></script>
   <script src="assets/js/cloud.js?v=20251020-17"></script>
@@ -364,56 +352,13 @@
         }
       });
 
-      // Menu actions: create playlist / smart
-      const mcpl = qs('menu-create-playlist');
-      const mcs = qs('menu-create-smart');
-      if (mcpl) mcpl.addEventListener('click', async () => {
-        const name = window.prompt('New playlist name');
-        if (!name) return;
-        try {
-          if (window.PlaylistUI && PlaylistUI.createPlaylistByName) {
-            const res = await PlaylistUI.createPlaylistByName(name);
-            if (res.ok) { try { Toast && Toast.show('Playlist created', 'success', 2000); } catch (_) {} }
-            else { try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {} }
-          } else {
-            const res = await API.post('api/playlists.php', { action: 'create', name });
-            if (res.ok) {
-              try { Toast && Toast.show('Playlist created', 'success', 2000); } catch (_) {}
-              if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
-            } else {
-              try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
-            }
-          }
-        } catch (err) {
-          console.error('Create playlist error', err);
-          try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
-        } finally {
-          if (menuPanel) menuPanel.classList.remove('open');
-        }
-      });
-      if (mcs) mcs.addEventListener('click', async () => {
-        const name = window.prompt('Smart playlist name');
-        if (!name) return;
-        try {
-          const res = await API.post('api/playlists.php', { action: 'create_smart', name, rules: {} });
-          if (res.ok) {
-            try { Toast && Toast.show('Smart playlist created', 'success', 2000); } catch (_) {}
-            if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
-          } else {
-            try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
-          }
-        } catch (err) {
-          console.error('Create smart playlist error', err);
-          try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
-        } finally {
-          if (menuPanel) menuPanel.classList.remove('open');
-        }
-      });
+      
 
       // Speed Dial: quick add playlist
       const sd = qs('speed-dial');
       const sdToggle = qs('sd-toggle');
       const sdAdd = qs('sd-add-playlist');
+      const sdAddSmart = qs('sd-add-smart');
       if (sdToggle) sdToggle.addEventListener('click', () => {
         if (!sd) return;
         sd.classList.toggle('open');
@@ -445,6 +390,24 @@
           if (sd) sd.classList.remove('open');
         }
       });
+      if (sdAddSmart) sdAddSmart.addEventListener('click', async () => {
+        const name = window.prompt('New smart playlist name');
+        if (!name) return;
+        try {
+          const res = await API.post('api/playlists.php', { action: 'create_smart', name, rules: {} });
+          if (res.ok) {
+            try { Toast && Toast.show('Smart playlist created', 'success', 2000); } catch (_) {}
+            if (typeof PlaylistUI !== 'undefined') PlaylistUI.selectPlaylist(res.playlist.id);
+          } else {
+            try { Toast && Toast.show(res.error || 'Failed to create', 'error', 2500); } catch (_) {}
+          }
+        } catch (err) {
+          console.error('Create smart playlist error', err);
+          try { Toast && Toast.show('Create failed: ' + err.message, 'error', 2500); } catch (_) {}
+        } finally {
+          if (sd) sd.classList.remove('open');
+        }
+      });
 
       // Floating Layers button: scroll to and highlight layers panel
       const fabLayers = qs('fab-layers');
@@ -459,6 +422,6 @@
     })();
   </script>
 
-  <script src="assets/js/app.js?v=20251020-17"></script>
+  <script src="assets/js/app.js?v=20251020-19"></script>
 </body>
 </html>

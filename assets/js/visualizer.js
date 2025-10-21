@@ -186,7 +186,7 @@
       } else {
         this.trailAlpha = val;
       }
- 
+    }
 
     setDecay(v) {
       const d = Number(v);
@@ -241,8 +241,10 @@
       } else {
         this.radialFloor = val;
       }
- 
+    }
+
     setBeatSensitivity(v) {
+
       this.beatSense = Math.max(0.2, Math.min(2.5, Number(v) || 1));
     }
 
@@ -806,8 +808,6 @@
     drawMirrorBars(w, h, L) {
       const thickness = (L?.thickness ?? this.thickness);
       const floor = (L?.radialFloor ?? this.radialFloor);
-      const c1 = L?.color1 || this.color1;
-      const c2 = L?.color2 || this.color2;
       const bins = this.bins(100);
       const { peaks } = this.getSpectrum(bins, 1.0, floor);
       const bw = w / bins;
@@ -817,15 +817,19 @@
       this.ctx.save();
       this.ctx.lineCap = 'round';
 
-      for (let i =     // gradient color along x
+      for (let i = 0; i < bins; i++) {
+        const v = peaks[i];
+        const bh = v * (h / 2);
+        const x = i * bw + (gap / 2);
         const t = i / (bins - 1);
         this.ctx.fillStyle = lerpColor(this.color1, this.color2, t);
 
-        // bottom bars
-        ctxRoundRect(this.ctx, x, h - bh, width, bh, 4);
+        // bottom bars mirrored around center line
+        ctxRoundRect(this.ctx, x, h / 2, width, bh, 4);
         this.ctx.fill();
+
         // top bars mirrored
-        ctxRoundRect(this.ctx, x, 0, width, bh, 4);
+        ctxRoundRect(this.ctx, x, h / 2 - bh, width, bh, 4);
         this.ctx.fill();
       }
 
