@@ -61,14 +61,7 @@ const App = (() => {
       updateStatus();
     } catch (_) {}
 
-    // Populate menu playlists if panel is present
-    try {
-      const panel = document.getElementById('top-menu-panel');
-      if (panel && typeof PlaylistUI !== 'undefined' && PlaylistUI.loadPlaylists) {
-        await PlaylistUI.loadPlaylists();
-      }
-    } catch (_) {}
-  }
+    }
 
   function ensureAudioContext() {
     if (state.ctx) return;
@@ -1204,6 +1197,70 @@ ${item.name}`);
       });
     }
 
+    // Layers: edit selected layer controls inside Layers drawer
+    const leStyle = document.getElementById('layer-edit-style');
+    const leC1 = document.getElementById('layer-edit-color-1');
+    const leC2 = document.getElementById('layer-edit-color-2');
+    const leSeg = document.getElementById('layer-edit-segments');
+    const leBlend = document.getElementById('layer-edit-blend');
+    const leAlpha = document.getElementById('layer-edit-alpha');
+
+    const lRot = document.getElementById('layer-rot');
+    const lDec = document.getElementById('layer-decay');
+    const lTh = document.getElementById('layer-thickness');
+    const lRing = document.getElementById('layer-ring-floor');
+    const lRad = document.getElementById('layer-radial-floor');
+    const lSpike = document.getElementById('layer-spike-scale');
+    const lWave = document.getElementById('layer-wave-scale');
+
+    function withSel(fn) {
+      if (!state.viz || state.viz.sel < 0) return;
+      try { fn(state.viz.layers[state.viz.sel], state.viz.sel); } catch (_) {}
+    }
+
+    if (leStyle) leStyle.addEventListener('change', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setStyle) state.viz.setStyle(e.target.value);
+        renderLayersUI();
+        syncLayerEditForm();
+        logAction('layer.edit.style', { value: e.target.value });
+      });
+    });
+    if (leC1) leC1.addEventListener('change', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setColors) state.viz.setColors(e.target.value, (leC2?.value || '#1e90ff'));
+        renderLayersUI();
+        logAction('layer.edit.color1', { value: e.target.value });
+      });
+    });
+    if (leC2) leC2.addEventListener('change', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setColors) state.viz.setColors((leC1?.value || '#19d3ae'), e.target.value);
+        renderLayersUI();
+        logAction('layer.edit.color2', { value: e.target.value });
+      });
+    });
+    if (leSeg) leSeg.addEventListener('input', (e) => {
+      withSel(() => {
+        if (state.viz && state.viz.setSegments) state.viz.setSegments(Number(e.target.value));
+        logAction('layer.edit.segments', { value: Number(e.target.value) }, 'layer-edit-segments');
+      });
+    });
+    if (leBlend) leBlend.addEventListener('change', (e) => {
+      withSel((L) => { L.blend = e.target.value; renderLayersUI(); syncLayerEditForm(); logAction('layer.edit.blend', { value: e.target.value }); });
+    });
+    if (leAlpha) leAlpha.addEventListener('input', (e) => {
+      withSel((L) => { L.alpha = Number(e.target.value); renderLayersUI(); logAction('layer.edit.alpha', { value: Number(e.target.value) }, 'layer-edit-alpha'); });
+    });
+
+    if (lRot) lRot.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRotationSpeed) state.viz.setRotationSpeed(Number(e.target.value)); }); logAction('layer.edit.rot', { value: Number(e.target.value) }, 'layer-rot'); });
+    if (lDec) lDec.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setDecay) state.viz.setDecay(Number(e.target.value)); }); logAction('layer.edit.decay', { value: Number(e.target.value) }, 'layer-decay'); });
+    if (lTh) lTh.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setThickness) state.viz.setThickness(Number(e.target.value)); }); logAction('layer.edit.thickness', { value: Number(e.target.value) }, 'layer-thickness'); });
+    if (lRing) lRing.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRingFloor) state.viz.setRingFloor(Number(e.target.value)); }); logAction('layer.edit.ringFloor', { value: Number(e.target.value) }, 'layer-ring-floor'); });
+    if (lRad) lRad.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setRadialFloor) state.viz.setRadialFloor(Number(e.target.value)); }); logAction('layer.edit.radialFloor', { value: Number(e.target.value) }, 'layer-radial-floor'); });
+    if (lSpike) lSpike.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setSpikeScale) state.viz.setSpikeScale(Number(e.target.value)); }); logAction('layer.edit.spikeScale', { value: Number(e.target.value) }, 'layer-spike-scale'); });
+    if (lWave) lWave.addEventListener('input', (e) => { withSel(() => { if (state.viz && state.viz.setWaveScale) state.viz.setWaveScale(Number(e.target.value)); }); logAction('layer.edit.waveScale', { value: Number(e.target.value) }, 'layer-wave-scale'); });
+
     document.getElementById('eq-toggle').addEventListener('click', () => {
       const panel = document.getElementById('eq-panel');
       panel.classList.toggle('show');
@@ -1585,19 +1642,12 @@ ${state.currentTrack.name || state.currentTrack.path}`);
       gear.addEventListener('click', (e) => {
         e.stopPropagation();
         state.viz.selectLayer(idx);
-        // open drawer and set style select to this layer's style
-        const sel = document.getElementById('viz-style');
-        if (sel) { sel.value = L.style || sel.value; sel.dispatchEvent(new Event('change', { bubbles: true })); }
-        const fab = document.getElementById('fab-customize');
-        const drawer = document.getElementById('viz-drawer');
-        const scrim = document.getElementById('viz-scrim');
-        if (drawer) {
-          drawer.classList.add('open');
-          if (scrim) scrim.classList.add('show');
-        } else if (fab) {
-          fab.click();
-        }
-      });
+        const d = document.getElementById('layers-drawer');
+        const s = document.getElementById('layers-scrim');
+        if (d) d.classList.add('open');
+        if (s) s.classList.add('show');
+        syncLayerEditForm();
+     _code }new)</;
 
       const trash = document.createElement('button');
       trash.className = 'trash btn danger';
@@ -1630,6 +1680,30 @@ ${state.currentTrack.name || state.currentTrack.path}`);
 
       ul.appendChild(li);
     });
+
+    // After render, sync edit form with selected layer
+    syncLayerEditForm();
+  }
+
+  function syncLayerEditForm() {
+    try {
+      if (!state.viz || state.viz.sel < 0) return;
+      const L = state.viz.layers[state.viz.sel];
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = String(val); };
+      setVal('layer-edit-style', L.style || 'circle');
+      setVal('layer-edit-color-1', L.color1 || '#19d3ae');
+      setVal('layer-edit-color-2', L.color2 || '#1e90ff');
+      setVal('layer-rot', (typeof L.rotation !== 'undefined' ? L.rotation : document.getElementById('viz-rot')?.value) || 0.6);
+      setVal('layer-decay', (document.getElementById('viz-decay')?.value) || 0.92);
+      setVal('layer-thickness', (typeof L.thickness !== 'undefined' ? L.thickness : document.getElementById('viz-thickness')?.value) || 1);
+      setVal('layer-ring-floor', (typeof L.ringFloor !== 'undefined' ? L.ringFloor : document.getElementById('viz-ring-floor')?.value) || 0.16);
+      setVal('layer-radial-floor', (typeof L.radialFloor !== 'undefined' ? L.radialFloor : document.getElementById('viz-radial-floor')?.value) || 0.16);
+      setVal('layer-spike-scale', (typeof L.spikeScale !== 'undefined' ? L.spikeScale : document.getElementById('viz-spike-scale')?.value) || 1);
+      setVal('layer-wave-scale', (typeof L.waveScale !== 'undefined' ? L.waveScale : document.getElementById('viz-wave-scale')?.value) || 1);
+      setVal('layer-edit-segments', (typeof L.segments !== 'undefined' ? L.segments : document.getElementById('viz-segments')?.value) || 2);
+      setVal('layer-edit-blend', (typeof L.blend !== 'undefined' ? L.blend : 'lighter'));
+      setVal('layer-edit-alpha', (typeof L.alpha !== 'undefined' ? L.alpha : 1));
+    } catch (_) {}
   }
 
   // Populate Playlist Create drawer list from library
@@ -1700,7 +1774,7 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     }
   }
 
-  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, populatePlaylistCreateList, openPlaylistSelect, ensureAudioContext };
+  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, populatePlaylistCreateList, openPlaylistSelect, ensureAudioContext, syncLayerEditForm };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {

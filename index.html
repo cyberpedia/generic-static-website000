@@ -5,24 +5,12 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Avee-like Media Player (PHP/XAMPP)</title>
-  <link rel="stylesheet" href="assets/style.css?v=20251020-19">
+  <link rel="stylesheet" href="assets/style.css?v=20251020-20">
   
   <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
 <body>
-  <header class="md-appbar" role="banner">
-    <div class="appbar-row">
-      <button id="top-menu" class="icon-btn" aria-label="Menu" title="Menu">☰</button>
-      <div class="appbar-title">Avee-like Media Player</div>
-      <div class="appbar-actions"></div>
-    </div>
-  </header>
-  <div id="top-menu-panel" class="md-menu" aria-label="Menu">
-    <div class="menu-section">
-      <strong>Playlists</strong>
-      <ul id="menu-playlists" class="list"></ul>
-    </div>
-  </div>
+  
   <main>
     <div id="app" class="md-container md-grid app-grid">
       <!-- Library Sidebar -->
@@ -214,38 +202,88 @@
             </div>
             <div class="drawer-content">
               <div class="customize">
-                <div class="viz-style">
-                  <label>Layer Style</label>
-                  <select id="layer-style">
-                    <option value="bars">Bars</option>
-                    <option value="wave">Wave</option>
-                    <option value="mirror">Mirror Bars</option>
-                    <option value="ring">Ring Wave</option>
-                    <option value="radial">Radial Bars</option>
-                    <option value="particles">Particles</option>
-                    <option value="circle">Circle</option>
-                  </select>
+
+                <div class="panel layers-panel">
+                  <div class="panel-head"><h3>Current Layers</h3></div>
+                  <ul id="layers-list" class="layers"></ul>
                 </div>
-                <div class="viz-colors">
-                  <label>Colors</label>
-                  <input type="color" id="layer-color-1" value="#19d3ae"/>
-                  <input type="color" id="layer-color-2" value="#1e90ff"/>
-                </div>
-                <div class="viz-tuning">
-                  <label>Segments <input type="range" id="layer-segments" min="1" max="8" step="1" value="2"></label>
-                  <label>Blend Mode
-                    <select id="layer-blend">
-                      <option value="lighter" selected>Lighter</option>
-                      <option value="normal">Normal</option>
-                      <option value="screen">Screen</option>
-                      <option value="multiply">Multiply</option>
+
+                <div class="panel">
+                  <div class="panel-head"><h3>Add Layer</h3></div>
+                  <div class="viz-style">
+                    <label>Layer Style</label>
+                    <select id="layer-style">
+                      <option value="bars">Bars</option>
+                      <option value="wave">Wave</option>
+                      <option value="mirror">Mirror Bars</option>
+                      <option value="ring">Ring Wave</option>
+                      <option value="radial">Radial Bars</option>
+                      <option value="particles">Particles</option>
+                      <option value="circle">Circle</option>
                     </select>
-                  </label>
-                  <label>Opacity <input type="range" id="layer-alpha" min="0" max="1" step="0.05" value="1"></label>
+                  </div>
+                  <div class="viz-colors">
+                    <label>Colors</label>
+                    <input type="color" id="layer-color-1" value="#19d3ae"/>
+                    <input type="color" id="layer-color-2" value="#1e90ff"/>
+                  </div>
+                  <div class="viz-tuning">
+                    <label>Segments <input type="range" id="layer-segments" min="1" max="8" step="1" value="2"></label>
+                    <label>Blend Mode
+                      <select id="layer-blend">
+                        <option value="lighter" selected>Lighter</option>
+                        <option value="normal">Normal</option>
+                        <option value="screen">Screen</option>
+                        <option value="multiply">Multiply</option>
+                      </select>
+                    </label>
+                    <label>Opacity <input type="range" id="layer-alpha" min="0" max="1" step="0.05" value="1"></label>
+                  </div>
+                  <div class="presets">
+                    <button id="layer-add2" class="btn primary">Add Layer</button>
+                  </div>
                 </div>
-                <div class="presets">
-                  <button id="layer-add2" class="btn primary">Add Layer</button>
+
+                <div class="panel">
+                  <div class="panel-head"><h3>Edit Selected Layer</h3></div>
+                  <div class="viz-style">
+                    <label>Style</label>
+                    <select id="layer-edit-style">
+                      <option value="bars">Bars</option>
+                      <option value="wave">Wave</option>
+                      <option value="mirror">Mirror Bars</option>
+                      <option value="ring">Ring Wave</option>
+                      <option value="radial">Radial Bars</option>
+                      <option value="particles">Particles</option>
+                      <option value="circle">Circle</option>
+                    </select>
+                  </div>
+                  <div class="viz-colors">
+                    <label>Colors</label>
+                    <input type="color" id="layer-edit-color-1" value="#19d3ae"/>
+                    <input type="color" id="layer-edit-color-2" value="#1e90ff"/>
+                  </div>
+                  <div class="viz-tuning">
+                    <label>Rotation <input type="range" id="layer-rot" min="0" max="3" step="0.01" value="0.6"></label>
+                    <label>Decay <input type="range" id="layer-decay" min="0.7" max="0.99" step="0.001" value="0.92"></label>
+                    <label>Thickness <input type="range" id="layer-thickness" min="0.5" max="3" step="0.01" value="1"></label>
+                    <label>Ring Floor <input type="range" id="layer-ring-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
+                    <label>Radial Floor <input type="range" id="layer-radial-floor" min="0" max="0.3" step="0.01" value="0.16"></label>
+                    <label>Spike Scale <input type="range" id="layer-spike-scale" min="0.5" max="2" step="0.01" value="1"></label>
+                    <label>Wave Scale <input type="range" id="layer-wave-scale" min="0.5" max="2" step="0.01" value="1"></label>
+                    <label>Segments <input type="range" id="layer-edit-segments" min="1" max="8" step="1" value="2"></label>
+                    <label>Blend Mode
+                      <select id="layer-edit-blend">
+                        <option value="lighter" selected>Lighter</option>
+                        <option value="normal">Normal</option>
+                        <option value="screen">Screen</option>
+                        <option value="multiply">Multiply</option>
+                      </select>
+                    </label>
+                    <label>Opacity <input type="range" id="layer-edit-alpha" min="0" max="1" step="0.05" value="1"></label>
+                  </div>
                 </div>
+
               </div>
             </div>
           </div>
@@ -378,6 +416,7 @@
     <div class="dial-items">
       <button id="sd-add-playlist" class="icon-btn" title="Add Playlist">📝</button>
       <button id="sd-add-smart" class="icon-btn" title="Add Smart Playlist">⚙️</button>
+      <button id="sd-add-to-pl" class="icon-btn" title="Add to Playlist">➕📄</button>
       <button id="sd-add-current" class="icon-btn" title="Add Current Track">➕🎵</button>
       <button id="sd-del-playlist" class="icon-btn danger" title="Delete Selected Playlist">🗑</button>
     </div>
@@ -438,7 +477,32 @@
       <ul id="pl-select-list" class="list"></ul>
     </div>
   </div>
-  <div id="pl-select-scrim" class="md-scrim" aria-hidden="true"></div>
+  <div id="pl-select-scrim" class="md-scrim" aria-hidden="tr"></</div>
+
+  <!-- Add to Playlist Drawer -->
+ < div id="pl-add-drawer" class="md-drawer" role="dialog" aria-modal="true" aria-labelledby="pl-add-drawer-title">
+   < div class="drawer-head">
+     < h3 id="pl-add-drawer-title">Add to Playli</sth3>
+     < button id="pl-add-close" class="icon-btn" aria-label="Close"</>✕button>
+  </  div>
+   < div class="drawer-content">
+     < div class="customize">
+       < div class="viz-style">
+         < label>Target Playli</stlabel>
+         < select id="pl-add-targ"></etselect>
+      </  div>
+       < div class="viz-style">
+         < label>Filt</erlabel>
+         < input type="text" id="pl-add-filter" placeholder="Type to filter…"/>
+      </  div>
+       < div class="presets">
+         < button id="pl-add-btn" class="btn primary">Add select</edbutton>
+      </  div>
+       < div class="list" id="pl-add-lib-list" style="max-height:50vh; overflow:au;"></todiv>
+    </  div>
+  </  div> </
+ div>
+ < div id="pl-add-s>
 
   <footer>
     <p>&copy; 2025 Avee-like Player (PHP)</p>
@@ -448,8 +512,8 @@
 
   <script src="assets/js/utils.js?v=20251020-17"></script>
   <script src="assets/js/equalizer.js?v=20251020-17"></script>
-  <script src="assets/js/visualizer.js?v=20251020-19"></script>
-  <script src="assets/js/playlists.js?v=20251020-17"></script>
+  <script src="assets/js/visualizer.js?v=20251020-"></</script>
+ <<script src="assets/js/playlists.js?v=20251020-17"></script>
   <script src="assets/js/settings.js?v=20251020-17"></script>
   <script src="assets/js/cloud.js?v=20251020-17"></script>
   <script src="assets/js/logger.js?v=20251020-17"></script>
@@ -463,9 +527,7 @@
       const drawer = qs('viz-drawer');
       const scrim = qs('viz-scrim');
       const closeBtn = qs('viz-drawer-close');
-      const menuBtn = qs('top-menu');
-      const menuPanel = qs('top-menu-panel');
-
+      
       function openDrawer() {
         if (!drawer) return;
         drawer.classList.add('open');
@@ -478,20 +540,11 @@
       }
 
       if (fab) fab.addEventListener('click', openDrawer);
-      if (menuBtn) menuBtn.addEventListener('click', async () => {
-        if (!menuPanel) return;
-        const willOpen = !menuPanel.classList.contains('open');
-        menuPanel.classList.toggle('open');
-        if (willOpen) {
-          try { if (window.PlaylistUI && PlaylistUI.loadPlaylists) await PlaylistUI.loadPlaylists(); } catch (_) {}
-        }
-      });
       if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
       if (scrim) scrim.addEventListener('click', closeDrawer);
       window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           closeDrawer();
-          if (menuPanel) menuPanel.classList.remove('open');
         }
       });
 
@@ -524,6 +577,101 @@
         if (s) s.classList.add('show');
       });
 
+      // Add to Playlist: open drawer and populate playlists + library
+      const sdAddTo = qs('sd-add-to-pl');
+      if (sdAddTo) sdAddTo.addEventListener('click', async () => {
+        const sd = qs('speed-dial'); if (sd) sd.classList.remove('open');
+        const d = qs('pl-add-drawer'), s = qs('pl-add-scrim');
+        if (d) d.classList.add('open');
+        if (s) s.classList.add('show');
+        // populate playlist target select
+        try {
+          const data = await API.get('api/playlists.php');
+          const sel = qs('pl-add-target');
+          if (sel) {
+            sel.innerHTML = '';
+            (data.playlists || []).forEach(pl => {
+              const opt = document.createElement('option');
+              opt.value = pl.id;
+              opt.textContent = pl.name + (pl.type === 'smart' ? ' • Smart' : '');
+              sel.appendChild(opt);
+            });
+          }
+        } catch (_) {}
+        // populate library checkboxes
+        try {
+          if (window.App && App.state && Array.isArray(App.state.library)) {
+            const listBox = qs('pl-add-lib-list');
+            const filter = qs('pl-add-filter');
+            function render(filterText) {
+              if (!listBox) return;
+              listBox.innerHTML = '';
+              const q = String(filterText || '').toLowerCase();
+              const src = q ? App.state.library.filter(it => (it.name || '').toLowerCase().includes(q)) : App.state.library;
+              src.forEach(it => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.justifyContent = 'space-between';
+                row.style.padding = '6px 8px';
+                row.style.borderBottom = '1px dashed #2a3350';
+                const lbl = document.createElement('label');
+                lbl.style.display = 'inline-flex';
+                lbl.style.alignItems = 'center';
+                lbl.style.gap = '8px';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = it.path;
+                const name = document.createElement('span');
+                name.textContent = it.name;
+                lbl.appendChild(cb);
+                lbl.appendChild(name);
+                row.appendChild(lbl);
+                listBox.appendChild(row);
+              });
+            }
+            render('');
+            if (filter) {
+              filter.oninput = () => render(filter.value);
+            }
+          }
+        } catch (_) {}
+      });
+      const plAddClose = qs('pl-add-close');
+      const plAddScrim = qs('pl-add-scrim');
+      if (plAddClose) plAddClose.addEventListener('click', () => { qs('pl-add-drawer').classList.remove('open'); plAddScrim.classList.remove('show'); });
+      if (plAddScrim) plAddScrim.addEventListener('click', () => { qs('pl-add-drawer').classList.remove('open'); plAddScrim.classList.remove('show'); });
+      const plAddBtn = qs('pl-add-btn');
+      if (plAddBtn) plAddBtn.addEventListener('click', async () => {
+        try {
+          const targetSel = qs('pl-add-target');
+          const targetId = targetSel ? targetSel.value : null;
+          if (!targetId) { try { Toast && Toast.show('Select a playlist', 'error'); } catch (_) {} return; }
+          const box = qs('pl-add-lib-list');
+          const cbs = box ? Array.from(box.querySelectorAll('input[type=\"checkbox\"]')).filter(cb => cb.checked) : [];
+          if (cbs.length === 0) { try { Toast && Toast.show('Select tracks', 'error'); } catch (_) {} return; }
+          const tracks = cbs.map(cb => {
+            const p = String(cb.value || '');
+            const item = (window.App && App.state && Array.isArray(App.state.library)) ? App.state.library.find(it => it.path === p) : null;
+            return item ? { path: item.path, name: item.name } : { path: p, name: p.split('/').pop() };
+          });
+          const res = await API.post('api/playlists.php', { action: 'add_tracks_bulk', id: targetId, tracks });
+          if (res.ok) {
+            const name = (res.playlist && res.playlist.name) ? res.playlist.name : (document.getElementById('playlist-title')?.textContent || 'Playlist');
+            try { Toast && Toast.show(`Added ${tracks.length} track(s) to \"${name}\"`, 'success'); } catch (_) {}
+            const d = qs('pl-add-drawer'), s = qs('pl-add-scrim');
+            if (d) d.classList.remove('open');
+            if (s) s.classList.remove('show');
+            if (window.PlaylistUI && PlaylistUI.selectPlaylist) PlaylistUI.selectPlaylist(targetId);
+          } else {
+            try { Toast && Toast.show(res.error || 'Add failed', 'error'); } catch (_) {}
+          }
+        } catch (err) {
+          console.error('Add to playlist failed', err);
+          try { Toast && Toast.show('Add failed: ' + err.message, 'error'); } catch (_) {}
+        }
+      });
+
       // Layers drawer open/close
       const fabLayers = qs('fab-layers');
       const layersDrawer = qs('layers-drawer');
@@ -532,6 +680,8 @@
       function openLayers() {
         if (layersDrawer) layersDrawer.classList.add('open');
         if (layersScrim) layersScrim.classList.add('show');
+        try { if (window.App && App.renderLayersUI) App.renderLayersUI(); } catch (_) {}
+        try { if (window.App && App.syncLayerEditForm) App.syncLayerEditForm(); } catch (_) {}
       }
       function closeLayers() {
         if (layersDrawer) layersDrawer.classList.remove('open');
@@ -686,6 +836,5 @@
     })();
   </script>
 
-  <script src="assets/js/app.js?v=20251020-19"></script>
-</body>
+  <script src="assets/js/app.js?v=20251020-"></</scr_code</body>
 </html>
