@@ -88,11 +88,20 @@
           </div>
 
           <!-- Floating Customize button + drawer -->
-          <!-- Unified Floating Action Button (single FAB + menu) -->
-          <button id="fab-main" class="md-fab" aria-label="Menu" title="Menu">＋</button>
-          <div id="fab-menu" class="md-popmenu" aria-label="Main Menu">
-            <button class="icon-btn" data-action="customize">✎ Customize</button>
-            <button class="icon-btn" data-action="layers">☷ Layers</button>
+          <!-- Unified Floating Action Button (single FAB + panel) -->
+          <button id="fab-main" class="md-fab" aria-label="Layers" title="Layers">☷</button>
+          <!-- Floating Layers panel -->
+          <div id="layers-fab-panel" class="md-float-layers" aria-label="Layers">
+            <div class="panel-head">
+              <h3>Layers</h3>
+              <div class="panel-actions">
+                <button id="layers-fab-add" class="icon-btn" title="Add Layer">＋</button>
+              </div>
+            </div>
+            <ul id="layers-fab-list" class="layers"></ul>
+          </div>
+          <!-- Type menu for add (+) -->
+          <div id="fab-menu" class="md-popmenu" aria-label="Add Layer Menu">
             <button class="icon-btn" data-type="circle">＋ Add Circle</button>
             <button class="icon-btn" data-type="radial">＋ Add Radial Bars</button>
             <button class="icon-btn" data-type="ring">＋ Add Ring Wave</button>
@@ -419,55 +428,52 @@
   <script src="assets/script.js?v=20251020-21"></script>
   <script src="assets/js/app.js?v=20251020-21"></script>
   <script>
-    // Unified FAB menu + drawers (no redundant functions)
+    // Single FAB opens floating Layers panel; + opens type menu; gear opens Layers drawer
     (function() {
       function qs(id){ return document.getElementById(id); }
-
-      // Drawers
-      const vizDrawer = qs('viz-drawer');
-      const vizScrim = qs('viz-scrim');
-      const vizClose = qs('viz-drawer-close');
 
       const layersDrawer = qs('layers-drawer');
       const layersScrim = qs('layers-scrim');
       const layersClose = qs('layers-drawer-close');
-
-      function openCustomize() {
-        if (vizDrawer) vizDrawer.classList.add('open');
-        if (vizScrim) vizScrim.classList.add('show');
-      }
-      function closeCustomize() {
-        if (vizDrawer) vizDrawer.classList.remove('open');
-        if (vizScrim) vizScrim.classList.remove('show');
-      }
-      function openLayers() {
+      function openLayersDrawer() {
         if (layersDrawer) layersDrawer.classList.add('open');
         if (layersScrim) layersScrim.classList.add('show');
         try { if (window.App && App.renderLayersUI) App.renderLayersUI(); } catch (_) {}
         try { if (window.App && App.syncLayerEditForm) App.syncLayerEditForm(); } catch (_) {}
       }
-      function closeLayers() {
+      function closeLayersDrawer() {
         if (layersDrawer) layersDrawer.classList.remove('open');
         if (layersScrim) layersScrim.classList.remove('show');
       }
+      if (layersClose) layersClose.addEventListener('click', closeLayersDrawer);
+      if (layersScrim) layersScrim.addEventListener('click', closeLayersDrawer);
 
-      if (vizClose) vizClose.addEventListener('click', closeCustomize);
-      if (vizScrim) vizScrim.addEventListener('click', closeCustomize);
-      if (layersClose) layersClose.addEventListener('click', closeLayers);
-      if (layersScrim) layersScrim.addEventListener('click', closeLayers);
-
-      // Unified FAB + menu
+      // Floating panel toggle
       const fab = qs('fab-main');
+      const panel = qs('layers-fab-panel');
       const menu = qs('fab-menu');
+      const addBtn = qs('layers-fab-add');
 
-      function toggleMenu() {
+      function togglePanel() {
+        if (!panel) return;
+        panel.classList.toggle('open');
+        try { if (panel.classList.contains('open') && window.App && App.renderLayersUI) App.renderLayersUI(); } catch (_) {}
+      }
+      function closePanel() {
+        if (panel) panel.classList.remove('open');
+      }
+
+      if (fab) fab.addEventListener('click', togglePanel);
+
+      // + type menu
+      function toggleMenu(e) {
+        if (e) e.stopPropagation();
         if (menu) menu.classList.toggle('open');
       }
       function closeMenu() {
         if (menu) menu.classList.remove('open');
       }
-
-      if (fab) fab.addEventListener('click', toggleMenu);
+      if (addBtn) addBtn.addEventListener('click', toggleMenu);
 
       function addLayerOfType(type) {
         if (!window.App || !App.state || !App.state.viz) {
@@ -493,50 +499,36 @@
           });
           App.state.viz.selectLayer(idx);
           if (App.renderLayersUI) App.renderLayersUI();
-          openLayers();
-          closeMenu();
           try { Toast && Toast.show('Layer added', 'success', 1500); } catch (_) {}
+          closeMenu();
         } catch (err) {
           console.error('Add layer failed', err);
           try { Toast && Toast.show('Add layer failed: ' + err.message, 'error'); } catch (_) {}
         }
       }
 
-      // Menu actions
       if (menu) {
         menu.addEventListener('click', (e) => {
           const btn = e.target.closest('button');
           if (!btn) return;
-          const action = btn.dataset.action;
           const type = btn.dataset.type;
-          if (action === 'customize') {
-            openCustomize();
-          } else if (action === 'layers') {
-            openLayers();
-          } else if (type) {
-            addLayerOfType(type);
-          }
+          if (type) addLayerOfType(type);
         });
       }
 
-      // Close menu when clicking outside
+      // Outside click closes menu and panel
       document.addEventListener('click', (e) => {
         const t = e.target;
-        if (!menu) return;
-        if (t === menu || menu.contains(t) || t === fab) return;
-        closeMenu();
+        if (menu && !(t === menu || menu.contains(t) || t === addBtn)) closeMenu();
+        if (panel && !(t === panel || panel.contains(t) || t === fab)) closePanel();
       });
 
-      // Esc key closes drawers and menu
+      // Esc key closes
       window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          closeCustomize();
-          closeLayers();
-          closeMenu();
-        }
+        if (e.key === 'Escape') { closeMenu(); closePanel(); closeLayersDrawer(); }
       });
 
-      // Keep legacy Add Layer (inside Layers drawer) wired to same path
+      // Keep "Add Layer" inside Layers drawer wired to same add function
       const layerAdd2 = qs('layer-add2');
       if (layerAdd2) layerAdd2.addEventListener('click', () => {
         const style = (qs('layer-style')?.value) || 'circle';

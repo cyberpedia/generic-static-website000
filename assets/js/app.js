@@ -1514,81 +1514,90 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     }
   }
 
-  // Render Layers UI from visualizer stack
+  // Render Layers UI from visualizer stack (populates both sidebar and floating panel)
   function renderLayersUI() {
-    const ul = document.getElementById('layers-list');
-    if (!ul || !state.viz) return;
-    ul.innerHTML = '';
+    if (!state.viz) return;
+    const targets = [];
+    const ulMain = document.getElementById('layers-list');
+    const ulFab  = document.getElementById('layers-fab-list');
+    if (ulMain) targets.push(ulMain);
+    if (ulFab) targets.push(ulFab);
+    if (targets.length === 0) return;
+
     const layers = state.viz.getLayers();
+    targets.forEach(ul => { ul.innerHTML = ''; });
+
     layers.forEach((L, idx) => {
-      const li = document.createElement('li');
-      li.dataset.index = String(idx);
+      targets.forEach(ul => {
+        const li = document.createElement('li');
+        li.dataset.index = String(idx);
 
-      const handle = document.createElement('span');
-      handle.className = 'handle';
-      handle.textContent = '⋮⋮';
+        const handle = document.createElement('span');
+        handle.className = 'handle';
+        handle.textContent = '⋮⋮';
 
-      const name = document.createElement('span');
-      name.className = 'name';
-      name.textContent = (L.style || 'Layer');
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = (L.style || 'Layer');
 
-      const actions = document.createElement('span');
-      actions.className = 'actions';
+        const actions = document.createElement('span');
+        actions.className = 'actions';
 
-      const eye = document.createElement('button');
-      eye.className = 'eye btn secondary';
-      eye.title = 'Visible';
-      eye.textContent = L.visible === false ? '🙈' : '👁';
-      eye.addEventListener('click', (e) => {
-        e.stopPropagation();
-        state.viz.setLayerVisible(idx, L.visible === false ? true : false);
-        renderLayersUI();
+        const eye = document.createElement('button');
+        eye.className = 'eye btn secondary';
+        eye.title = 'Visible';
+        eye.textContent = L.visible === false ? '🙈' : '👁';
+        eye.addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.viz.setLayerVisible(idx, L.visible === false ? true : false);
+          renderLayersUI();
+        });
+
+        const gear = document.createElement('button');
+        gear.className = 'gear btn secondary';
+        gear.title = 'Settings';
+        gear.textContent = '⚙️';
+        gear.addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.viz.selectLayer(idx);
+          const d = document.getElementById('layers-drawer');
+          const s = document.getElementById('layers-scrim');
+          if (d) d.classList.add('open');
+          if (s) s.classList.add('show');
+          syncLayerEditForm();
+        });
+
+        const trash = document.createElement('button');
+        trash.className = 'trash btn danger';
+        trash.title = 'Delete';
+        trash.textContent = '🗑';
+        trash.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!window.confirm('Delete layer?')) return;
+          state.viz.removeLayer(idx);
+          renderLayersUI();
+        });
+
+        actions.appendChild(eye);
+        actions.appendChild(gear);
+        actions.appendChild(trash);
+
+        li.appendChild(handle);
+        li.appendChild(name);
+        li.appendChild(actions);
+
+        li.addEventListener('click', () => {
+          state.viz.selectLayer(idx);
+          renderLayersUI();
+        });
+
+        // Highlight selected
+        if (state.viz.sel === idx) {
+          li.style.borderColor = '#2e7be7';
+        }
+
+        ul.appendChild(li);
       });
-
-      const gear = document.createElement('button');
-      gear.className = 'gear btn secondary';
-      gear.title = 'Settings';
-      gear.textContent = '⚙️';
-      gear.addEventListener('click', (e) => {
-        e.stopPropagation();
-        state.viz.selectLayer(idx);
-        const d = document.getElementById('layers-drawer');
-        const s = document.getElementById('layers-scrim');
-        if (d) d.classList.add('open');
-        if (s) s.classList.add('show');
-        syncLayerEditForm();
-      });
-
-      const trash = document.createElement('button');
-      trash.className = 'trash btn danger';
-      trash.title = 'Delete';
-      trash.textContent = '🗑';
-      trash.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!window.confirm('Delete layer?')) return;
-        state.viz.removeLayer(idx);
-        renderLayersUI();
-      });
-
-      actions.appendChild(eye);
-      actions.appendChild(gear);
-      actions.appendChild(trash);
-
-      li.appendChild(handle);
-      li.appendChild(name);
-      li.appendChild(actions);
-
-      li.addEventListener('click', () => {
-        state.viz.selectLayer(idx);
-        renderLayersUI();
-      });
-
-      // Highlight selected
-      if (state.viz.sel === idx) {
-        li.style.borderColor = '#2e7be7';
-      }
-
-      ul.appendChild(li);
     });
 
     // After render, sync edit form with selected layer
@@ -1684,7 +1693,7 @@ ${state.currentTrack.name || state.currentTrack.path}`);
     }
   }
 
-  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, ensureAudioContext, syncLayerEditFor_codeelect, ensureAudioContext, syncLayerEditForm };
+  return { init, playTrack, state, getCurrentTrack, loadLibrary, renderLayersUI, ensureAudioContext, syncLayerEditForm };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {

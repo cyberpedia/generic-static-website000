@@ -290,6 +290,41 @@ footer {
   gap: 8px;
 }
 
+/* Floating Layers panel opened by single FAB */
+.md-float-layers {
+  position: fixed;
+  right: 16px;
+  bottom: 152px; /* sits above the FAB */
+  z-index: 1105;
+  display: none;
+  width: clamp(260px, 54vw, 420px);
+  background: var(--md-panel);
+  border: 1px solid var(--md-panel-border);
+  box-shadow: 0 18px 50px var(--md-shadow);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.md-float-layers.open { display: block; }
+.md-float-layers .panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.md-float-layers .panel-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #f2f5ff;
+}
+.md-float-layers .panel-actions .icon-btn {
+  background: var(--md-accent);
+  color: #fff;
+}
+.md-float-layers .layers {
+  max-height: 46vh;
+  overflow: auto;
+}
+
 /* Floating Tools Panel */
 .md-float-tools {
   position: fixed;
